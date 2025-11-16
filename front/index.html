@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>Web bluetooth test</title>
+    </head>
+    <script>
+        window.addEventListener("DOMContentLoaded", () => {
+            const logDiv = document.getElementById("mobile-console");
+
+            if (!logDiv) return;
+
+            const oldLog = console.log;
+            const oldErr = console.error;
+
+            function writeToLog(type, args) {
+                const line = document.createElement("div");
+                line.textContent =
+                    `[${type}] ` +
+                    args
+                        .map((a) => {
+                            try {
+                                return JSON.stringify(a);
+                            } catch {
+                                return String(a);
+                            }
+                        })
+                        .join(" ");
+                logDiv.appendChild(line);
+                logDiv.scrollTop = logDiv.scrollHeight;
+            }
+
+            console.log = (...args) => {
+                oldLog(...args);
+                writeToLog("log", args);
+            };
+
+            console.error = (...args) => {
+                oldErr(...args);
+                writeToLog("err", args);
+            };
+
+            console.log("Console móvel iniciado");
+        });
+
+        function listen() {
+            navigator.bluetooth
+                .requestDevice({
+                    filters: [
+                        { manufacturerData: [{ companyIdentifier: 0x2023 }] },
+                    ],
+                })
+                .then((device) => console.log(device))
+                .catch((error) => console.error(error));
+        }
+    </script>
+    <body>
+        <h1>GGWave Test</h1>
+
+        <input id="msg" placeholder="Texto..." />
+        <button id="send">Enviar</button>
+
+        <br /><br />
+
+        <button id="listen" onclick="listen()">Ouvir</button>
+
+        <pre id="output"></pre>
+
+        <!-- AQUI: adiciona a div do console -->
+        <div
+            id="mobile-console"
+            style="
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                max-height: 40vh;
+                overflow: auto;
+                background: #000;
+                color: #0f0;
+                font-family: monospace;
+                font-size: 12px;
+                padding: 6px;
+                z-index: 999999;
+            "
+        ></div>
+    </body>
+</html>
