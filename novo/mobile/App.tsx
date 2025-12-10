@@ -1,5 +1,5 @@
 import 'react-native-get-random-values';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   FlatList,
   Text,
@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Alert,
   View,
+  Button,
 } from 'react-native';
 import { usePermissions } from './src/shared/hooks/usePermissions';
 import { useScanner } from './src/domain/bluetooth/useScanner';
@@ -14,8 +15,15 @@ import { useAdvertiser } from './src/domain/bluetooth/useAdvertiser';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { BleDevice } from './src/domain/bluetooth/types';
+import  CreateForm  from './CreateForm'
+import { stringify as uuidStringify } from 'uuid';
 
 export default function App() {
+
+  const [ formResponse, setResponse ] = useState<string | null>(null);
+  const [ eventNames, setEventNames ] = useState<Record<string, string>>({});
+  const [ errorName, setErrorName ] = useState<string | null>(null);
+
   const { allowed } = usePermissions();
 
   const { devices, isScanning, startScan, stopScan } = useScanner({ allowed });
@@ -27,6 +35,62 @@ export default function App() {
     return d;
   };
 
+  const getEventName = async (id: string, address: string) => {
+    console.log("getting event name of:", id);
+    try {
+      const res = await fetch(`http://192.168.1.107:8000/class/${id}/name`, {
+        // Android emulator: 10.0.2.2, iOS simulator: localhost
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      console.log("verificando: ", res);
+
+      if (!res.ok) {
+        const text = await res.text();
+	console.log("deu merda:", text);
+        throw new Error(`Status ${res.status}: ${text}`);
+      }
+
+      console.log("pegando json");
+      const json = await res.text();
+      console.log("stringando json:", json);
+      const name = json.name ?? JSON.stringify(json);
+
+      console.log("got name: ", name);
+
+      setEventNames(prev => ({
+	  ...prev,
+	  [id]: name,
+      }));
+
+      return name;
+      
+    } catch (e: any) {
+      setErrorName(e.message ?? 'Unknown error');
+    }   
+  };
+
+  useEffect(() => {
+  const fetchNames = async () => {
+      for (const d of devices) {
+	  console.log("fetch name device:", d);
+	  if (
+	      d.manufacturerData &&
+	      d.manufacturerData.length === 17 &&
+	      !eventNames[d.deviceAddress]
+	    ) {
+	      const id = uuidStringify(d.manufacturerData.slice(1));
+	      await getEventName(id, d.deviceAddress);
+	    }
+	  }
+	};
+
+	fetchNames();
+  }, [devices]);
+
   return (
     <SafeAreaProvider>
       <PaperProvider>
@@ -34,6 +98,7 @@ export default function App() {
           <Text style={styles.header}>BLE Scanner & Advertiser</Text>
 
           <View style={styles.buttonContainer}>
+
             <TouchableOpacity
               style={[styles.button, isScanning && styles.activeButton]}
               disabled={!allowed}
@@ -61,7 +126,7 @@ export default function App() {
                   Alert.alert('Modo ativo', 'Pare o scan antes de anunciar.');
                   return;
                 }
-                isAdvertising ? stopAdvertising() : startAdvertising();
+                isAdvertising ? stopAdvertising() : startAdvertising(formResponse);
               }}
             >
               <Text style={styles.buttonText}>
@@ -84,19 +149,43 @@ export default function App() {
               <FlatList
                 data={devices}
                 keyExtractor={item => item.deviceAddress}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.device}
-                    onPress={() => handleDevicePress(item)}
-                  >
-                    <Text>{`${item.deviceAddress} - ${
-                      item.deviceName || 'Sem nome'
-                    }`}</Text>
-                  </TouchableOpacity>
-                )}
+                renderItem={({ item }) => {
+		    console.log(item)
+		    if (item.manufacturerData && item.manufacturerData.length == 17) {
+
+			const id = uuidStringify(item.manufacturerData.slice(1));
+			const eventName = eventNames[id];
+			console.log("event names:", eventNames);
+
+			return (
+			  <TouchableOpacity
+			    style={styles.device}
+			    onPress={() => handleDevicePress(item)}
+			  >
+			    <Text>{`${item.address} - ${ item.name || 'Sem nome' }`}</Text>
+			    <Text>{`UUID: ${id}`}</Text>
+			    <Text>{`Event Name: ${ eventName || 'Carregando...'}`}</Text>
+			  </TouchableOpacity>
+			)
+		    } else {
+			return;
+		    }
+                }}
               />
             </>
           )}
+
+	  <CreateForm onSubmitResponse={setResponse}/>
+
+          {formResponse && (
+            <View style={styles.formResponseBox}>
+              <Text style={styles.formResponseTitle}>Resposta do servidor:</Text>
+              <Text style={styles.formResponseText}>
+                {uuidStringify(Object.values(formResponse))}
+              </Text>
+            </View>
+          )}
+
         </SafeAreaView>
       </PaperProvider>
     </SafeAreaProvider>
