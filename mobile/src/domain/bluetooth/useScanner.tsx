@@ -1,58 +1,48 @@
-import { NativeEventEmitter, NativeModules } from 'react-native';
-import { useCallback, useMemo, useState } from 'react';
-import { BleDevice, INDENTIFIER } from './types';
-import BleAdvertiser from 'react-native-ble-advertiser';
+// src/domain/bluetooth/useScanner.ts
+import { useCallback, useEffect, useState } from 'react';
+import { startScan, stopScan, ScannedDevice } from '../../ble/BleScanner';
 
 export type useScannerProps = {
   allowed: boolean;
 };
 
 export const useScanner = ({ allowed }: useScannerProps) => {
-  const [isScanning, setIsScanning] = useState<boolean>(false);
-  const [devices, setDevices] = useState<BleDevice[]>([]);
+  const [devices, setDevices] = useState<ScannedDevice[]>([]);
+  const [isScanning, setIsScanning] = useState(false);
 
-  const eventEmitter = useMemo(
-    () => new NativeEventEmitter(NativeModules.BLEAdvertiser),
-    [],
-  );
-
-  const startScan = useCallback(() => {
-    setDevices([]);
-
+  const startScanWrapper = useCallback(() => {
     if (!allowed) return;
 
-    BleAdvertiser.setCompanyId(INDENTIFIER);
-    BleAdvertiser.scan([INDENTIFIER], {})
-      .then(success => {
-        setIsScanning(true);
-        console.log('scan successful', success);
-      })
-      .catch(error => {
+    setDevices([]);
+    setIsScanning(true);
+
+    const unsubscribe = startScan(
+      device => {
+        setDevices(prev => {
+          // Evitar duplicatas pelo endereço
+          const exists = prev.find(d => d.address === device.address);
+          if (exists) return prev;
+          return [...prev, device];
+        });
+      },
+      error => {
+        console.error('Scan error:', error);
         setIsScanning(false);
-        console.log('scan error', error);
-      });
+      },
+    );
 
-    eventEmitter.addListener('onDeviceFound', (device: BleDevice) => {
-      console.log('device found: ', device);
+    return unsubscribe;
+  }, [allowed]);
 
-      setDevices(prev => [
-        ...prev.filter(d => d.deviceAddress !== device.deviceAddress),
-        device,
-      ]);
-    });
-  }, [allowed, eventEmitter]);
+  const stopScanWrapper = useCallback(async () => {
+    await stopScan();
+    setIsScanning(false);
+  }, []);
 
-  const stopScan = () => {
-    BleAdvertiser.stopScan()
-      .then(success => {
-        setIsScanning(false);
-        console.log('Stop Scan Successful', success);
-      })
-      .catch(error => {
-        setIsScanning(true);
-        console.log('Stop Scan Error', error);
-      });
+  return {
+    devices,
+    isScanning,
+    startScan: startScanWrapper,
+    stopScan: stopScanWrapper,
   };
-
-  return { isScanning, devices, stopScan, startScan };
 };
