@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/database/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Teacher {
+  id        Int    @id @default(autoincrement())
+  name      String
+  matricula String
+
+  courses Course[]
+}
+
+model Student {
+  id        Int    @id @default(autoincrement())
+  name      String
+  matricula String
+
+  enrollments CourseEnrollment[]
+}
+
+model Course {
+  id Int @id @default(autoincrement())
+
+  teacher   Teacher @relation(fields: [teacherId], references: [id])
+  teacherId Int
+
+  enrollments   CourseEnrollment[]
+  classSessions ClassSession[]
+}
+
+model CourseEnrollment {
+  id Int @id @default(autoincrement())
+
+  student   Student @relation(fields: [studentId], references: [id])
+  studentId Int
+
+  course   Course @relation(fields: [courseId], references: [id])
+  courseId Int
+
+  attendances Attendance[]
+
+  @@unique([studentId, courseId])
+}
+
+model ClassSession {
+  id Int @id @default(autoincrement())
+
+  course      Course       @relation(fields: [courseId], references: [id])
+  courseId    Int
+  attendances Attendance[]
+}
+
+model Attendance {
+  id Int @id @default(autoincrement())
+
+  enrollment   CourseEnrollment @relation(fields: [enrollmentId], references: [id])
+  enrollmentId Int
+
+  classSession   ClassSession @relation(fields: [classSessionId], references: [id])
+  classSessionId Int
+}
