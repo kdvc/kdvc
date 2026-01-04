@@ -1,14 +1,23 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from './database/database.module';
-import { CourseController } from './controller/course.controller';
-import { TeacherController } from './controller/teacher.controller';
-import { TeacherService } from './domain/teacher.service';
-import { StudentService } from './domain/student.service';
-import { StudentController } from './controller/student.controller';
+import { UsersController } from './controllers/users.controller';
+import { CoursesController } from './controllers/courses.controller';
+import { ClassesController } from './controllers/classes.controller';
+import { UsersService } from './services/users.service';
+import { CoursesService } from './services/courses.service';
+import { ClassesService } from './services/classes.service';
 
 @Module({
   imports: [DatabaseModule],
-  providers: [TeacherService, StudentService],
-  controllers: [CourseController, TeacherController, StudentController],
+  controllers: [
+    UsersController,
+    CoursesController,
+    ClassesController,
+  ],
+  providers: [
+    UsersService,
+    CoursesService,
+    ClassesService,
+  ],
 })
 export class AppModule {}

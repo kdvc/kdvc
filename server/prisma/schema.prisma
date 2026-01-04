@@ -7,60 +7,73 @@ datasource db {
   provider = "postgresql"
 }
 
-model Teacher {
-  id        Int    @id @default(autoincrement())
-  name      String
-  matricula String
-
-  courses Course[]
+enum Role {
+  TEACHER
+  STUDENT
 }
 
-model Student {
-  id        Int    @id @default(autoincrement())
+model User {
+  id        String   @id @default(uuid())
   name      String
-  matricula String
+  email     String   @unique
+  password  String
+  role      Role
 
-  enrollments CourseEnrollment[]
+  // Relations
+  coursesTeached Course[]        @relation("TeacherCourses")
+  coursesStudied StudentCourse[]
+  attendances    Attendance[]
+
+  @@unique([id, role])
 }
 
 model Course {
-  id Int @id @default(autoincrement())
+  id          String  @id @default(uuid())
+  name        String
+  description String?
 
-  teacher   Teacher @relation(fields: [teacherId], references: [id])
-  teacherId Int
+  teacherId   String
+  teacherRole Role    @default(TEACHER)
+  teacher     User    @relation("TeacherCourses", fields: [teacherId, teacherRole], references: [id, role])
 
-  enrollments   CourseEnrollment[]
-  classSessions ClassSession[]
+  students StudentCourse[]
+  classes  Class[]
 }
 
-model CourseEnrollment {
-  id Int @id @default(autoincrement())
+model StudentCourse {
+  studentId   String
+  studentRole Role   @default(STUDENT)
+  student     User   @relation(fields: [studentId, studentRole], references: [id, role])
 
-  student   Student @relation(fields: [studentId], references: [id])
-  studentId Int
-
+  courseId String
   course   Course @relation(fields: [courseId], references: [id])
-  courseId Int
 
-  attendances Attendance[]
+  assignedAt DateTime @default(now())
 
-  @@unique([studentId, courseId])
+  @@id([studentId, courseId])
 }
 
-model ClassSession {
-  id Int @id @default(autoincrement())
+model Class {
+  id    String   @id @default(uuid())
+  topic String
+  date  DateTime
 
-  course      Course       @relation(fields: [courseId], references: [id])
-  courseId    Int
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id])
+
   attendances Attendance[]
 }
 
 model Attendance {
-  id Int @id @default(autoincrement())
+  id String @id @default(uuid())
 
-  enrollment   CourseEnrollment @relation(fields: [enrollmentId], references: [id])
-  enrollmentId Int
+  classId String
+  class   Class  @relation(fields: [classId], references: [id])
 
-  classSession   ClassSession @relation(fields: [classSessionId], references: [id])
-  classSessionId Int
+  studentId String
+  student   User   @relation(fields: [studentId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([classId, studentId])
 }

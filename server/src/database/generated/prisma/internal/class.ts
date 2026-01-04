@@ -20,7 +20,7 @@ const config: runtime.GetPrismaClientConfig = {
   "clientVersion": "7.1.0",
   "engineVersion": "ab635e6b9d606fa5c8fb8b1a7f909c3c3c1c98ba",
   "activeProvider": "postgresql",
-  "inlineSchema": "generator client {\n  provider = \"prisma-client\"\n  output   = \"../src/database/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n}\n\nmodel Teacher {\n  id        Int    @id @default(autoincrement())\n  name      String\n  matricula String\n}\n\nmodel Student {\n  id        Int    @id @default(autoincrement())\n  name      String\n  matricula String\n}\n\nenum UserType {\n  TEACHER\n  STUDENT\n}\n",
+  "inlineSchema": "generator client {\n  provider = \"prisma-client\"\n  output   = \"../src/database/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n}\n\nenum Role {\n  TEACHER\n  STUDENT\n}\n\nmodel User {\n  id       String @id @default(uuid())\n  name     String\n  email    String @unique\n  password String\n  role     Role\n\n  // Relations\n  coursesTeached Course[]        @relation(\"TeacherCourses\")\n  coursesStudied StudentCourse[]\n  attendances    Attendance[]\n\n  @@unique([id, role])\n}\n\nmodel Course {\n  id          String  @id @default(uuid())\n  name        String\n  description String?\n\n  teacherId   String\n  teacherRole Role   @default(TEACHER)\n  teacher     User   @relation(\"TeacherCourses\", fields: [teacherId, teacherRole], references: [id, role])\n\n  students StudentCourse[]\n  classes  Class[]\n}\n\nmodel StudentCourse {\n  studentId   String\n  studentRole Role   @default(STUDENT)\n  student     User   @relation(fields: [studentId, studentRole], references: [id, role])\n\n  courseId String\n  course   Course @relation(fields: [courseId], references: [id])\n\n  assignedAt DateTime @default(now())\n\n  @@id([studentId, courseId])\n}\n\nmodel Class {\n  id    String   @id @default(uuid())\n  topic String\n  date  DateTime\n\n  courseId String\n  course   Course @relation(fields: [courseId], references: [id])\n\n  attendances Attendance[]\n}\n\nmodel Attendance {\n  id String @id @default(uuid())\n\n  classId String\n  class   Class  @relation(fields: [classId], references: [id])\n\n  studentId String\n  student   User   @relation(fields: [studentId], references: [id])\n\n  createdAt DateTime @default(now())\n\n  @@unique([classId, studentId])\n}\n",
   "runtimeDataModel": {
     "models": {},
     "enums": {},
@@ -28,7 +28,7 @@ const config: runtime.GetPrismaClientConfig = {
   }
 }
 
-config.runtimeDataModel = JSON.parse("{\"models\":{\"Teacher\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"matricula\",\"kind\":\"scalar\",\"type\":\"String\"}],\"dbName\":null},\"Student\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"matricula\",\"kind\":\"scalar\",\"type\":\"String\"}],\"dbName\":null}},\"enums\":{},\"types\":{}}")
+config.runtimeDataModel = JSON.parse("{\"models\":{\"User\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"password\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"role\",\"kind\":\"enum\",\"type\":\"Role\"},{\"name\":\"coursesTeached\",\"kind\":\"object\",\"type\":\"Course\",\"relationName\":\"TeacherCourses\"},{\"name\":\"coursesStudied\",\"kind\":\"object\",\"type\":\"StudentCourse\",\"relationName\":\"StudentCourseToUser\"},{\"name\":\"attendances\",\"kind\":\"object\",\"type\":\"Attendance\",\"relationName\":\"AttendanceToUser\"}],\"dbName\":null},\"Course\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"teacherId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"teacherRole\",\"kind\":\"enum\",\"type\":\"Role\"},{\"name\":\"teacher\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"TeacherCourses\"},{\"name\":\"students\",\"kind\":\"object\",\"type\":\"StudentCourse\",\"relationName\":\"CourseToStudentCourse\"},{\"name\":\"classes\",\"kind\":\"object\",\"type\":\"Class\",\"relationName\":\"ClassToCourse\"}],\"dbName\":null},\"StudentCourse\":{\"fields\":[{\"name\":\"studentId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"studentRole\",\"kind\":\"enum\",\"type\":\"Role\"},{\"name\":\"student\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"StudentCourseToUser\"},{\"name\":\"courseId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"course\",\"kind\":\"object\",\"type\":\"Course\",\"relationName\":\"CourseToStudentCourse\"},{\"name\":\"assignedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":null},\"Class\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"topic\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"date\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"courseId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"course\",\"kind\":\"object\",\"type\":\"Course\",\"relationName\":\"ClassToCourse\"},{\"name\":\"attendances\",\"kind\":\"object\",\"type\":\"Attendance\",\"relationName\":\"AttendanceToClass\"}],\"dbName\":null},\"Attendance\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"classId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"class\",\"kind\":\"object\",\"type\":\"Class\",\"relationName\":\"AttendanceToClass\"},{\"name\":\"studentId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"student\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"AttendanceToUser\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":null}},\"enums\":{},\"types\":{}}")
 
 async function decodeBase64AsWasm(wasmBase64: string): Promise<WebAssembly.Module> {
   const { Buffer } = await import('node:buffer')
@@ -58,8 +58,8 @@ export interface PrismaClientConstructor {
    * @example
    * ```
    * const prisma = new PrismaClient()
-   * // Fetch zero or more Teachers
-   * const teachers = await prisma.teacher.findMany()
+   * // Fetch zero or more Users
+   * const users = await prisma.user.findMany()
    * ```
    * 
    * Read more in our [docs](https://pris.ly/d/client).
@@ -80,8 +80,8 @@ export interface PrismaClientConstructor {
  * @example
  * ```
  * const prisma = new PrismaClient()
- * // Fetch zero or more Teachers
- * const teachers = await prisma.teacher.findMany()
+ * // Fetch zero or more Users
+ * const users = await prisma.user.findMany()
  * ```
  * 
  * Read more in our [docs](https://pris.ly/d/client).
@@ -175,24 +175,54 @@ export interface PrismaClient<
   }>>
 
       /**
-   * `prisma.teacher`: Exposes CRUD operations for the **Teacher** model.
+   * `prisma.user`: Exposes CRUD operations for the **User** model.
     * Example usage:
     * ```ts
-    * // Fetch zero or more Teachers
-    * const teachers = await prisma.teacher.findMany()
+    * // Fetch zero or more Users
+    * const users = await prisma.user.findMany()
     * ```
     */
-  get teacher(): Prisma.TeacherDelegate<ExtArgs, { omit: OmitOpts }>;
+  get user(): Prisma.UserDelegate<ExtArgs, { omit: OmitOpts }>;
 
   /**
-   * `prisma.student`: Exposes CRUD operations for the **Student** model.
+   * `prisma.course`: Exposes CRUD operations for the **Course** model.
     * Example usage:
     * ```ts
-    * // Fetch zero or more Students
-    * const students = await prisma.student.findMany()
+    * // Fetch zero or more Courses
+    * const courses = await prisma.course.findMany()
     * ```
     */
-  get student(): Prisma.StudentDelegate<ExtArgs, { omit: OmitOpts }>;
+  get course(): Prisma.CourseDelegate<ExtArgs, { omit: OmitOpts }>;
+
+  /**
+   * `prisma.studentCourse`: Exposes CRUD operations for the **StudentCourse** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more StudentCourses
+    * const studentCourses = await prisma.studentCourse.findMany()
+    * ```
+    */
+  get studentCourse(): Prisma.StudentCourseDelegate<ExtArgs, { omit: OmitOpts }>;
+
+  /**
+   * `prisma.class`: Exposes CRUD operations for the **Class** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Classes
+    * const classes = await prisma.class.findMany()
+    * ```
+    */
+  get class(): Prisma.ClassDelegate<ExtArgs, { omit: OmitOpts }>;
+
+  /**
+   * `prisma.attendance`: Exposes CRUD operations for the **Attendance** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Attendances
+    * const attendances = await prisma.attendance.findMany()
+    * ```
+    */
+  get attendance(): Prisma.AttendanceDelegate<ExtArgs, { omit: OmitOpts }>;
 }
 
 export function getPrismaClientClass(): PrismaClientConstructor {
