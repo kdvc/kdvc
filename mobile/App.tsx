@@ -6,8 +6,8 @@ import { Provider as PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import HomeScreen from './src/screens/HomeScreen';
 import BluetoothScreen from './src/screens/BluetoothScreen';
-import StudentHomeScreen from './src/screens/StudentHomeScreen';
-import ProfessorHomeScreen from './src/screens/ProfessorHomeScreen';
+import StudentHomeScreen from './src/screens/student/StudentHomeScreen';
+import ProfessorHomeScreen from './src/screens/professor/ProfessorHomeScreen';
 
 const Stack = createNativeStackNavigator();
 
