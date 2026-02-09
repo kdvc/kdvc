@@ -9,6 +9,10 @@ import {
   ScrollView,
 } from 'react-native';
 
+interface CreateFormProps {
+  onSubmitResponse: (response: any) => void;
+}
+
 const CreateForm: React.FC<CreateFormProps> = ({ onSubmitResponse }) => {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);

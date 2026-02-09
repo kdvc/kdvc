@@ -7,15 +7,17 @@ import {
     StyleSheet,
     Alert,
     View,
+    Button,
 } from 'react-native';
-import { usePermissions } from '../../shared/hooks/usePermissions';
-import { useScanner } from '../../domain/bluetooth/useScanner';
-import { useAdvertiser } from '../../domain/bluetooth/useAdvertiser';
-import { ScannedDevice } from '../../ble/BleScanner';
+import { usePermissions } from '../shared/hooks/usePermissions';
+import { useScanner } from '../domain/bluetooth/useScanner';
+import { useAdvertiser } from '../domain/bluetooth/useAdvertiser';
+import { Provider as PaperProvider } from 'react-native-paper';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+
+import { ScannedDevice } from '../ble/BleScanner';
 import CreateForm from '../../CreateForm';
 import { stringify as uuidStringify } from 'uuid';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { Provider as PaperProvider } from 'react-native-paper';
 
 export default function BluetoothScreen() {
     const [formResponse, setResponse] = useState<any>(null);
@@ -89,175 +91,147 @@ export default function BluetoothScreen() {
     }, [devices]);
 
     return (
-        <SafeAreaView style={styles.container}>
-            <Text style={styles.header}>BLE Scanner & Advertiser</Text>
+        <SafeAreaProvider>
+            <PaperProvider>
+                <SafeAreaView style={styles.container}>
+                    <Text style={styles.header}>BLE Scanner & Advertiser</Text>
 
-            <View style={styles.buttonContainer}>
-                <TouchableOpacity
-                    style={[styles.button, isScanning && styles.activeButton]}
-                    disabled={!allowed}
-                    onPress={() => {
-                        if (isAdvertising) {
-                            Alert.alert(
-                                'Modo ativo',
-                                'Pare o advertising antes de escanear.',
-                            );
-                            return;
-                        }
-                        isScanning ? stopScan() : startScan();
-                    }}
-                >
-                    <Text style={styles.buttonText}>
-                        {isScanning ? 'Parar Scan' : 'Iniciar Scan'}
+                    <View style={styles.buttonContainer}>
+                        <TouchableOpacity
+                            style={[styles.button, isScanning && styles.activeButton]}
+                            disabled={!allowed}
+                            onPress={() => {
+                                if (isAdvertising) {
+                                    Alert.alert(
+                                        'Modo ativo',
+                                        'Pare o advertising antes de escanear.',
+                                    );
+                                    return;
+                                }
+                                isScanning ? stopScan() : startScan();
+                            }}
+                        >
+                            <Text style={styles.buttonText}>
+                                {isScanning ? 'Parar Scan' : 'Iniciar Scan'}
+                            </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.button, isAdvertising && styles.activeButton]}
+                            disabled={!allowed}
+                            onPress={() => {
+                                if (isScanning) {
+                                    Alert.alert('Modo ativo', 'Pare o scan antes de anunciar.');
+                                    return;
+                                }
+                                isAdvertising
+                                    ? stopAdvertising()
+                                    : startAdvertising(formResponse);
+                            }}
+                        >
+                            <Text style={styles.buttonText}>
+                                {isAdvertising ? 'Parar Advertising' : 'Iniciar Advertising'}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    <Text style={styles.statusText}>
+                        {isScanning
+                            ? '📡 Scanning ativo'
+                            : isAdvertising
+                                ? '📢 Advertising ativo'
+                                : 'Aguardando ação...'}
                     </Text>
-                </TouchableOpacity>
 
-                <TouchableOpacity
-                    style={[styles.button, isAdvertising && styles.activeButton]}
-                    disabled={!allowed}
-                    onPress={() => {
-                        if (isScanning) {
-                            Alert.alert('Modo ativo', 'Pare o scan antes de anunciar.');
-                            return;
-                        }
-                        isAdvertising
-                            ? stopAdvertising()
-                            : startAdvertising(formResponse);
-                    }}
-                >
-                    <Text style={styles.buttonText}>
-                        {isAdvertising ? 'Parar Advertising' : 'Iniciar Advertising'}
-                    </Text>
-                </TouchableOpacity>
-            </View>
+                    {isScanning && (
+                        <>
+                            <Text style={styles.title}>Dispositivos encontrados:</Text>
+                            <FlatList
+                                data={devices}
+                                keyExtractor={item => item.address}
+                                renderItem={({ item }) => {
+                                    console.log(item);
+                                    if (
+                                        item.manufacturerData &&
+                                        item.manufacturerData.length == 17
+                                    ) {
+                                        const id = uuidStringify(new Uint8Array(item.manufacturerData.slice(1)));
+                                        const eventName = eventNames[id];
+                                        console.log('event names:', eventNames);
 
-            <Text style={styles.statusText}>
-                {isScanning
-                    ? '📡 Scanning ativo'
-                    : isAdvertising
-                        ? '📢 Advertising ativo'
-                        : 'Aguardando ação...'}
-            </Text>
+                                        return (
+                                            <TouchableOpacity
+                                                style={styles.device}
+                                                onPress={() => handleDevicePress(item)}
+                                            >
+                                                <Text>{`${item.address} - ${item.name || 'Sem nome'
+                                                    }`}</Text>
+                                                <Text>{`UUID: ${id}`}</Text>
+                                                <Text>{`Event Name: ${eventName || 'Carregando...'
+                                                    }`}</Text>
+                                            </TouchableOpacity>
+                                        );
+                                    } else {
+                                        return null;
+                                    }
+                                }}
+                            />
+                        </>
+                    )}
 
-            {isScanning && (
-                <>
-                    <Text style={styles.title}>Dispositivos encontrados:</Text>
-                    <FlatList
-                        data={devices}
-                        keyExtractor={item => item.address}
-                        renderItem={({ item }) => {
-                            console.log(item);
-                            if (
-                                item.manufacturerData &&
-                                item.manufacturerData.length == 17
-                            ) {
-                                const id = uuidStringify(new Uint8Array(item.manufacturerData.slice(1)));
-                                const eventName = eventNames[id];
-                                console.log('event names:', eventNames);
+                    <CreateForm onSubmitResponse={setResponse} />
 
-                                return (
-                                    <TouchableOpacity
-                                        style={styles.device}
-                                        onPress={() => handleDevicePress(item)}
-                                    >
-                                        <Text>{`${item.address} - ${item.name || 'Sem nome'
-                                            }`}</Text>
-                                        <Text>{`UUID: ${id}`}</Text>
-                                        <Text>{`Event Name: ${eventName || 'Carregando...'
-                                            }`}</Text>
-                                    </TouchableOpacity>
-                                );
-                            } else {
-                                return null;
-                            }
-                        }}
-                    />
-                </>
-            )}
-
-            <CreateForm onSubmitResponse={setResponse} />
-
-            <View style={styles.formResponseBox}>
-                <Text style={styles.formResponseTitle}>
-                    Resposta do servidor:
-                </Text>
-                <Text style={styles.formResponseText}>
-                    {typeof formResponse === 'string'
-                        ? formResponse
-                        : uuidStringify(new Uint8Array(Object.values(formResponse) as number[]))}
-                </Text>
-            </View>
-        </SafeAreaView>
+                    {formResponse && (
+                        <View style={styles.formResponseBox}>
+                            <Text style={styles.formResponseTitle}>
+                                Resposta do servidor:
+                            </Text>
+                            <Text style={styles.formResponseText}>
+                                {JSON.stringify(formResponse, null, 2)}
+                            </Text>
+                        </View>
+                    )}
+                </SafeAreaView>
+            </PaperProvider>
+        </SafeAreaProvider>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        padding: 20,
-        backgroundColor: '#f5f5f5',
-    },
-    header: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginBottom: 20,
-        textAlign: 'center',
-        color: '#333',
-    },
+    container: { flex: 1, padding: 16, backgroundColor: '#fafafa' },
+    header: { fontSize: 22, fontWeight: 'bold', marginBottom: 16 },
     buttonContainer: {
         flexDirection: 'row',
         justifyContent: 'space-around',
         marginBottom: 20,
     },
     button: {
-        backgroundColor: '#007AFF',
-        padding: 15,
-        borderRadius: 10,
-        minWidth: 140,
-        alignItems: 'center',
+        backgroundColor: '#007bff',
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 12,
     },
-    activeButton: {
-        backgroundColor: '#FF3B30',
-    },
-    buttonText: {
-        color: 'white',
-        fontWeight: 'bold',
-    },
+    activeButton: { backgroundColor: '#28a745' },
+    buttonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
     statusText: {
+        fontSize: 16,
+        fontStyle: 'italic',
         textAlign: 'center',
         marginBottom: 20,
-        fontSize: 16,
-        color: '#666',
     },
-    title: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 10,
-        marginTop: 20,
-    },
-    device: {
-        padding: 15,
-        backgroundColor: 'white',
-        borderRadius: 10,
-        marginBottom: 10,
-        borderWidth: 1,
-        borderColor: '#ddd',
-    },
+    title: { fontSize: 18, fontWeight: 'bold', marginBottom: 8 },
+    device: { padding: 10, borderBottomWidth: 1, borderColor: '#ccc' },
     formResponseBox: {
         marginTop: 20,
-        padding: 15,
-        backgroundColor: '#e8f4f8',
+        padding: 10,
+        backgroundColor: '#e9ecef',
         borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#bce0fd',
     },
     formResponseTitle: {
         fontWeight: 'bold',
         marginBottom: 5,
-        color: '#004466',
     },
     formResponseText: {
         fontFamily: 'monospace',
-        color: '#333',
     },
 });

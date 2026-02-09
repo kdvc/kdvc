@@ -9,6 +9,7 @@ import HomeScreen from './src/screens/HomeScreen';
 import ProfessorHomeScreen from './src/screens/professor/ProfessorHomeScreen';
 import StudentHomeScreen from './src/screens/student/StudentHomeScreen';
 import BluetoothScreen from './src/screens/BluetoothScreen';
+import ClassDetailsScreen from './src/screens/professor/ClassDetailsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -27,6 +28,11 @@ export default function App() {
               name="ProfessorHome"
               component={ProfessorHomeScreen}
               options={{ title: 'Professor Home' }}
+            />
+            <Stack.Screen
+              name="ClassDetails"
+              component={ClassDetailsScreen}
+              options={{ title: 'Class Details' }}
             />
             <Stack.Screen
               name="StudentHome"
