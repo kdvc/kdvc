@@ -1,0 +1,20 @@
+services:
+  kdvc-db:
+    image: postgres:17
+    container_name: kdvc-db
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: kdvc
+      POSTGRES_PASSWORD: kdvc
+      POSTGRES_DB: kdvc
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - network
+
+volumes:
+  pg_data:
+
+networks:
+  network:
