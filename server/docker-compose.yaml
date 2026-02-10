@@ -1,6 +1,6 @@
 services:
   kdvc-db:
-    image: postgres:latest
+    image: postgres:17
     container_name: kdvc-db
     ports:
       - 5432:5432
