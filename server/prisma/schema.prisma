@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client"
+  output   = "./generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  TEACHER
+  STUDENT
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role
+
+  // Relations
+  coursesTeached Course[]        @relation("TeacherCourses")
+  coursesStudied StudentCourse[]
+  attendances    Attendance[]
+
+  @@unique([id, role])
+}
+
+model Course {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+
+  teacherId   String
+  teacherRole Role    @default(TEACHER)
+  teacher     User    @relation("TeacherCourses", fields: [teacherId, teacherRole], references: [id, role])
+
+  students StudentCourse[]
+  classes  Class[]
+}
+
+model StudentCourse {
+  studentId   String
+  studentRole Role   @default(STUDENT)
+  student     User   @relation(fields: [studentId, studentRole], references: [id, role])
+
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id])
+
+  assignedAt DateTime @default(now())
+
+  @@id([studentId, courseId])
+}
+
+model Class {
+  id    String   @id @default(uuid())
+  topic String
+  date  DateTime
+
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id])
+
+  attendances Attendance[]
+}
+
+model Attendance {
+  id String @id @default(uuid())
+
+  classId String
+  class   Class  @relation(fields: [classId], references: [id])
+
+  studentId String
+  student   User   @relation(fields: [studentId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([classId, studentId])
+}
