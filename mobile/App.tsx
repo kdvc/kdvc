@@ -8,6 +8,7 @@ import HomeScreen from './src/screens/HomeScreen';
 import BluetoothScreen from './src/screens/BluetoothScreen';
 import StudentHomeScreen from './src/screens/student/StudentHomeScreen';
 import ProfessorHomeScreen from './src/screens/professor/ProfessorHomeScreen';
+import ClassDetailsScreen from './src/screens/student/ClassDetailsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -25,17 +26,22 @@ export default function App() {
             <Stack.Screen
               name="StudentHome"
               component={StudentHomeScreen}
-              options={{ title: 'Aluno' }}
+              options={{ headerShown: false }}
             />
             <Stack.Screen
               name="ProfessorHome"
               component={ProfessorHomeScreen}
-              options={{ title: 'Professor' }}
+              options={{ headerShown: false}}
             />
             <Stack.Screen
               name="Bluetooth"
               component={BluetoothScreen}
-              options={{ title: 'Scanner Bluetooth' }}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="ClassDetails"
+              component={ClassDetailsScreen}
+              options={{ headerShown: false }}
             />
           </Stack.Navigator>
         </NavigationContainer>
