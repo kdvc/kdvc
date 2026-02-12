@@ -25,24 +25,24 @@ export default function App() {
               options={{ headerShown: false }}
             />
             <Stack.Screen
-              name="ProfessorHome"
-              component={ProfessorHomeScreen}
-              options={{ title: 'Professor Home' }}
-            />
-            <Stack.Screen
-              name="ClassDetails"
-              component={ClassDetailsScreen}
-              options={{ title: 'Class Details' }}
-            />
-            <Stack.Screen
               name="StudentHome"
               component={StudentHomeScreen}
-              options={{ title: 'Student Home' }}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="ProfessorHome"
+              component={ProfessorHomeScreen}
+              options={{ headerShown: false}}
             />
             <Stack.Screen
               name="Bluetooth"
               component={BluetoothScreen}
-              options={{ title: 'Bluetooth Scanner' }}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="ClassDetails"
+              component={ClassDetailsScreen}
+              options={{ headerShown: false }}
             />
           </Stack.Navigator>
         </NavigationContainer>
