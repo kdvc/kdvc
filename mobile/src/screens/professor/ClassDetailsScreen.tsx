@@ -41,15 +41,15 @@ export default function ClassDetailsScreen() {
     const { discipline } = route.params || {};
     const [activeTab, setActiveTab] = useState<TabType>('students');
 
-    const renderHeader = () => (
-        <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                <Text style={styles.backButtonText}>← Voltar</Text>
-            </TouchableOpacity>
-            <Text style={styles.title}>{discipline?.name || 'Detalhes da Turma'}</Text>
-            <Text style={styles.subtitle}>{discipline?.schedule || ''}</Text>
-        </View>
-    );
+    // const renderHeader = () => (
+    //     <View style={styles.header}>
+    //         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+    //             <Text style={styles.backButtonText}>← Voltar</Text>
+    //         </TouchableOpacity>
+    //         <Text style={styles.title}>{discipline?.name || 'Detalhes da Turma'}</Text>
+    //         <Text style={styles.subtitle}>{discipline?.schedule || ''}</Text>
+    //     </View>
+    // );
 
     const renderTabs = () => (
         <View style={styles.tabContainer}>
@@ -115,7 +115,7 @@ export default function ClassDetailsScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
-            {renderHeader()}
+            {/* {renderHeader()} */}
             {renderTabs()}
             <View style={styles.content}>
                 {activeTab === 'students' ? renderStudentsList() : renderAttendanceList()}

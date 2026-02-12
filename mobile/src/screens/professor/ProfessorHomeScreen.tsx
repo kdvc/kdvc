@@ -9,6 +9,7 @@ interface Discipline {
     id: string;
     name: string;
     schedule: string;
+    studentCount: number;
 }
 
 interface Student {
@@ -18,10 +19,10 @@ interface Student {
 }
 
 const mockDisciplines: Discipline[] = [
-    { id: '1', name: 'Matemática Discreta', schedule: 'Segunda 08:00 - 10:00' },
-    { id: '2', name: 'Cálculo I', schedule: 'Quarta 14:00 - 16:00' },
-    { id: '3', name: 'Álgebra Linear', schedule: 'Sexta 10:00 - 12:00' },
-    { id: '4', name: 'Física I', schedule: 'Terça 16:00 - 18:00' },
+    { id: '1', name: 'Matemática Discreta', schedule: 'Segunda 08:00 - 10:00', studentCount: 42 },
+    { id: '2', name: 'Cálculo I', schedule: 'Quarta 14:00 - 16:00', studentCount: 35 },
+    { id: '3', name: 'Álgebra Linear', schedule: 'Sexta 10:00 - 12:00', studentCount: 28 },
+    { id: '4', name: 'Física I', schedule: 'Terça 16:00 - 18:00', studentCount: 30 },
 ];
 
 const mockStudentsData: Student[] = [
@@ -46,11 +47,11 @@ export default function ProfessorHomeScreen() {
         setModalVisible(true);
     };
 
-    const handleTogglePresence = (studentId: string) => {
+    const handleSetPresence = (studentId: string, present: boolean) => {
         setStudents(prevStudents =>
             prevStudents.map(student =>
                 student.id === studentId
-                    ? { ...student, present: !student.present }
+                    ? { ...student, present: present }
                     : student
             )
         );
@@ -66,6 +67,7 @@ export default function ProfessorHomeScreen() {
                     <DisciplineCard
                         name={item.name}
                         schedule={item.schedule}
+                        studentCount={item.studentCount}
                         onStartCall={() => handleStartCall(item.name)}
                         onPress={() => navigation.navigate('ClassDetails', { discipline: item })}
                     />
@@ -95,7 +97,7 @@ export default function ProfessorHomeScreen() {
                 disciplineName={selectedDiscipline}
                 students={students}
                 onClose={() => setModalVisible(false)}
-                onTogglePresence={handleTogglePresence}
+                onSetPresence={handleSetPresence}
             />
         </SafeAreaView>
     );
@@ -104,7 +106,7 @@ export default function ProfessorHomeScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#E3F2FD', // Light Blue background
+        backgroundColor: '#ffffffff', // Light Blue background
     },
     header: {
         padding: 20,

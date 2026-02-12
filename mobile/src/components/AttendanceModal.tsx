@@ -12,7 +12,7 @@ interface AttendanceModalProps {
     disciplineName: string;
     students: Student[];
     onClose: () => void;
-    onTogglePresence: (studentId: string) => void;
+    onSetPresence: (studentId: string, present: boolean) => void;
 }
 
 export const AttendanceModal: React.FC<AttendanceModalProps> = ({
@@ -20,7 +20,7 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
     disciplineName,
     students,
     onClose,
-    onTogglePresence,
+    onSetPresence,
 }) => {
     return (
         <Modal
@@ -28,26 +28,52 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
             transparent={true}
             visible={visible}
             onRequestClose={onClose}
+            statusBarTranslucent={true}
         >
             <View style={styles.centeredView}>
                 <View style={styles.modalView}>
                     <Text style={styles.modalTitle}>Chamada - {disciplineName}</Text>
-                    <Text style={styles.subtitle}>Toque no aluno para confirmar presença</Text>
+                    <Text style={styles.subtitle}>Gerencie a presença dos alunos</Text>
 
                     <FlatList
                         data={students}
                         keyExtractor={(item) => item.id}
                         renderItem={({ item }) => (
-                            <TouchableOpacity
-                                onPress={() => onTogglePresence(item.id)}
-                                style={[
-                                    styles.studentItem,
-                                    { opacity: item.present ? 1 : 0.3 }, // Transparent if absent, opaque if present
-                                ]}
-                            >
-                                <Text style={styles.studentName}>{item.name}</Text>
-                                {item.present && <Text style={styles.presentStatus}>Presente</Text>}
-                            </TouchableOpacity>
+                            <View style={styles.studentItem}>
+                                <Text style={[
+                                    styles.studentName,
+                                    item.present ? styles.textPresent : styles.textAbsent
+                                ]}>
+                                    {item.name}
+                                </Text>
+                                <View style={styles.actionButtons}>
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.iconButton,
+                                            item.present ? styles.presentButtonActive : styles.presentButtonInactive
+                                        ]}
+                                        onPress={() => onSetPresence(item.id, true)}
+                                    >
+                                        <Text style={[
+                                            styles.buttonIcon,
+                                            item.present ? styles.iconActive : styles.iconInactive
+                                        ]}>✓</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.iconButton,
+                                            !item.present ? styles.absentButtonActive : styles.absentButtonInactive
+                                        ]}
+                                        onPress={() => onSetPresence(item.id, false)}
+                                    >
+                                        <Text style={[
+                                            styles.buttonIcon,
+                                            !item.present ? styles.iconActive : styles.iconInactive
+                                        ]}>✕</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
                         )}
                         style={styles.list}
                     />
@@ -69,7 +95,6 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 22,
         backgroundColor: 'rgba(0,0,0,0.5)',
     },
     modalView: {
@@ -114,9 +139,53 @@ const styles = StyleSheet.create({
     studentName: {
         fontSize: 18,
         color: '#333',
+        flex: 1,
     },
-    presentStatus: {
-        color: 'green',
+    actionButtons: {
+        flexDirection: 'row',
+        gap: 10,
+    },
+    iconButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#ccc',
+    },
+    presentButtonActive: {
+        backgroundColor: '#4CAF50', // Solid Green
+        borderColor: '#4CAF50',
+    },
+    presentButtonInactive: {
+        backgroundColor: 'transparent',
+        borderColor: '#ccc',
+    },
+    absentButtonActive: {
+        backgroundColor: '#F44336', // Solid Red
+        borderColor: '#F44336',
+    },
+    absentButtonInactive: {
+        backgroundColor: 'transparent',
+        borderColor: '#ccc',
+    },
+    iconActive: {
+        color: '#fff', // White icon for active state
+    },
+    iconInactive: {
+        color: '#ccc', // Gray icon for inactive state
+    },
+    buttonIcon: {
+        fontSize: 20,
+        fontWeight: 'bold',
+    },
+    textPresent: {
+        color: '#4CAF50',
+        fontWeight: 'bold',
+    },
+    textAbsent: {
+        color: '#F44336',
         fontWeight: 'bold',
     },
     closeButton: {
