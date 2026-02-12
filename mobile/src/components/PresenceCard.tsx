@@ -19,26 +19,40 @@ export default function PresenceCard({ date, present }: Props) {
 
 const styles = StyleSheet.create({
   card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     padding: 16,
     borderRadius: 12,
-    backgroundColor: '#FEF7FF',
-    borderWidth: 1,
-    borderColor: '#CAC4D0',
+    backgroundColor: '#FFFFFF',
+    marginBottom: 12,
+
+    // Shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   date: {
     fontSize: 16,
     color: '#1D1B20',
-    marginBottom: 6,
-    fontWeight: 500
+    fontWeight: '500',
   },
   status: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: 'bold',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    overflow: 'hidden',
   },
   present: {
-    color: '#34C759',
+    color: '#1B5E20', // Darker green text
+    backgroundColor: '#E8F5E9', // Light green bg
   },
   absent: {
-    color: '#852221',
+    color: '#B71C1C', // Darker red text
+    backgroundColor: '#FFEBEE', // Light red bg
   },
 });

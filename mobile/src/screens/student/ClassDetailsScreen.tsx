@@ -46,15 +46,7 @@ export default function ClassDetailsScreen() {
       <ClassDetailsHeader title={classData.name} navigation={navigation} />
 
       <ScrollView contentContainerStyle={styles.content}>
-        <PrimaryButton
-          title={
-            classData.isAttendanceActive
-              ? 'Registrar Presença'
-              : 'Chamada encerrada'
-          }
-          disabled={!classData.isAttendanceActive}
-          onPress={() => console.log(`Presença registrada na turma ${classId}`)}
-        />
+        <Text style={styles.sectionTitle}>Histórico de Presença</Text>
 
         <View style={styles.history}>
           {classData.attendanceHistory.map((item: any) => (
@@ -100,10 +92,17 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 24,
-    gap: 36,
+    paddingBottom: 40,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1D1B20',
+    marginTop: 24,
+    marginBottom: 16,
   },
   history: {
-    gap: 20,
+    gap: 0, // Gap handled by card margin
   },
   loadingContainer: {
     flex: 1,

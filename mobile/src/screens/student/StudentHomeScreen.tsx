@@ -29,10 +29,19 @@ export default function StudentHomeScreen() {
             title={item.name}
             description={item.description}
             isAttendanceActive={item.isAttendanceActive}
+            isRegistered={item.isRegistered}
             onPress={() =>
               navigation.navigate('ClassDetails', {
                 classId: item.id,
               })}
+            onRegisterPresence={() => {
+              console.log(`Registrando presença na turma: ${item.name}`);
+              // Update local state to show as registered
+              const updatedClasses = classes.map(c =>
+                c.id === item.id ? { ...c, isRegistered: true } : c
+              );
+              setClasses(updatedClasses);
+            }}
           />
         )}
       />

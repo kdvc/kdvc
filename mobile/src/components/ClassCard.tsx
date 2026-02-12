@@ -23,17 +23,21 @@ const colors = {
 };
 
 type ClassCardProps = {
-  title: string;                 
-  description: string;           
-  isAttendanceActive?: boolean;    
+  title: string;
+  description: string;
+  isAttendanceActive?: boolean;
+  isRegistered?: boolean;
   onPress?: () => void;
+  onRegisterPresence?: () => void;
 };
 
 export function ClassCard({
   title,
   description,
   isAttendanceActive = false,
+  isRegistered = false,
   onPress,
+  onRegisterPresence,
 }: ClassCardProps) {
 
   const avatarLabel = title
@@ -62,8 +66,26 @@ export function ClassCard({
 
       {/* Right side */}
       {isAttendanceActive && (
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>Chamada ativa</Text>
+        <View style={styles.rightContainer}>
+          <View style={styles.activeBadge}>
+            <Text style={styles.activeLabel}>Chamada Ativa</Text>
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.registerButton,
+              isRegistered && styles.registeredButton
+            ]}
+            onPress={isRegistered ? undefined : onRegisterPresence}
+            disabled={isRegistered}
+          >
+            <Text style={[
+              styles.registerButtonText,
+              isRegistered && styles.registeredButtonText
+            ]}>
+              {isRegistered ? 'Registrada' : 'Registrar'}
+            </Text>
+          </TouchableOpacity>
         </View>
       )}
     </TouchableOpacity>
@@ -73,70 +95,107 @@ export function ClassCard({
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    height: 80,
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    backgroundColor: colors.background,
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    borderColor: colors.border,
-    borderWidth: 1,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+
+    // Soft, modern shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
 
   left: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 16,
     flex: 1,
   },
 
   avatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 20,
-    backgroundColor: colors.genericAvatar,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#F3E5F5', // Lighter purple
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   avatarText: {
     color: colors.primary,
-    fontWeight: '600',
-    fontSize: 14,
+    fontWeight: '700',
+    fontSize: 18,
   },
 
   textContainer: {
     flex: 1,
+    gap: 2,
   },
 
   title: {
     fontSize: 16,
-    fontWeight: '500',
-    color: colors.textPrimary,
+    fontWeight: '600',
+    color: '#1D1B20',
+    letterSpacing: 0.1,
   },
 
   subtitle: {
     fontSize: 14,
-    color: colors.textPrimary,
-    marginTop: 4,
-    fontWeight: '400',
+    color: '#757575',
   },
 
-  badge: {
-    borderWidth: 1,
-    borderColor: colors.success,
-    borderRadius: 10,
+  rightContainer: {
+    alignItems: 'center',
+    gap: 8,
+    marginLeft: 12,
+  },
+
+  // Active Badge - Pill shape, subtle
+  activeBadge: {
+    backgroundColor: '#E8F5E9',
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    top: 16,
-    
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#C8E6C9',
   },
 
-  badgeText: {
-    color: colors.success,
-    fontSize: 14,
-    fontWeight: '500',
+  activeLabel: {
+    fontSize: 10,
+    color: '#2E7D32',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+
+  registerButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 8, // Slightly rounded, not full pill
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    elevation: 1,
+  },
+
+  registeredButton: {
+    backgroundColor: '#F5F5F5',
+    elevation: 0,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+
+  registerButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
+  registeredButtonText: {
+    color: '#9E9E9E',
   },
 });

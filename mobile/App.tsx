@@ -26,17 +26,17 @@ export default function App() {
             <Stack.Screen
               name="StudentHome"
               component={StudentHomeScreen}
-              options={{ title: 'Aluno' }}
+              options={{ headerShown: false }}
             />
             <Stack.Screen
               name="ProfessorHome"
               component={ProfessorHomeScreen}
-              options={{ title: 'Professor' }}
+              options={{ headerShown: false}}
             />
             <Stack.Screen
               name="Bluetooth"
               component={BluetoothScreen}
-              options={{ title: 'Scanner Bluetooth' }}
+              options={{ headerShown: false }}
             />
             <Stack.Screen
               name="ClassDetails"
