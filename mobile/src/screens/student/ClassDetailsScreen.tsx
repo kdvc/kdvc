@@ -11,7 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 
 import PresenceCard from '../../components/PresenceCard';
-import PrimaryButton from '../../components/PrimaryButton';
+// import PrimaryButton from '../../components/PrimaryButton'; // Unused
 import { getClassById } from '../../services/mockApi';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
@@ -73,14 +73,13 @@ function ClassDetailsHeader({
 }) {
   return (
     <View style={headerStyles.container}>
-      <TouchableOpacity onPress={() => navigation.goBack()}>
-        <Icon name="arrow-back" size={24} color='#1D1B20' />
+      <TouchableOpacity onPress={() => navigation.goBack()} style={headerStyles.backButton}>
+        <Icon name="arrow-back" size={24} color='#4F378B' />
       </TouchableOpacity>
-
 
       <Text style={headerStyles.title}>{title}</Text>
 
-      <View style={{ width: 24 }} />
+      <View style={{ width: 40 }} />
     </View>
   );
 }
@@ -93,12 +92,13 @@ const styles = StyleSheet.create({
   content: {
     padding: 24,
     paddingBottom: 40,
+    paddingTop: 16, // Reduced top padding
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#1D1B20',
-    marginTop: 24,
+    marginTop: 0, // Removed margin top as header handles spacing
     marginBottom: 16,
   },
   history: {
@@ -114,23 +114,26 @@ const styles = StyleSheet.create({
 
 const headerStyles = StyleSheet.create({
   container: {
-    height: 64,
+    height: 56, // Reduced height
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 18,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
     backgroundColor: '#FEF7FF',
-    gap: '16',
-    marginBottom: 2,
-    marginTop: 2
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+    marginTop: 0,
+    marginBottom: 0
   },
-  back: {
-    fontSize: 34,
-    color: '#4F378B',
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
   },
   title: {
-    fontSize: 20,
-    fontWeight: '400',
+    fontSize: 18,
+    fontWeight: 'bold',
     color: '#1D1B20',
-
   },
 });

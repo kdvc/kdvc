@@ -1,5 +1,24 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+    View,
+    Text,
+    TouchableOpacity,
+    StyleSheet,
+} from 'react-native';
+
+const colors = {
+    primary: '#4F378B',
+    background: '#FEF7FF',
+    card: '#FFFFFF',
+    border: '#CAC4D0',
+    genericAvatar: '#EADDFF',
+
+    textPrimary: '#1D1B20',
+    textSecondary: '#FFFFFF',
+
+    success: '#34C759',
+    danger: '#852221',
+};
 
 interface DisciplineCardProps {
     name: string;
@@ -7,72 +26,144 @@ interface DisciplineCardProps {
     studentCount?: number;
     onStartCall: () => void;
     onPress?: () => void;
+    isActive?: boolean;
 }
 
-export const DisciplineCard: React.FC<DisciplineCardProps> = ({ name, schedule, studentCount, onStartCall, onPress }) => {
+export function DisciplineCard({
+    name,
+    schedule,
+    studentCount,
+    onStartCall,
+    onPress,
+    isActive = true, // Default to true if not provided (backward compatibility)
+}: DisciplineCardProps) {
+
+    const avatarLabel = name
+        .split(' ')
+        .map(word => word[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase();
+
     return (
-        <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.9}>
-            <View style={styles.infoContainer}>
-                <Text style={styles.disciplineName}>{name}</Text>
-                {schedule && <Text style={styles.scheduleText}>{schedule}</Text>}
-                {studentCount !== undefined && (
-                    <Text style={styles.studentCountText}>Total de Alunos: {studentCount}</Text>
-                )}
+        <TouchableOpacity
+            style={styles.container}
+            onPress={onPress}
+            activeOpacity={0.75}
+        >
+            <View style={styles.topSection}>
+                <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>{avatarLabel}</Text>
+                </View>
+
+                <View style={styles.textContainer}>
+                    <Text style={styles.title}>{name}</Text>
+                    {schedule && <Text style={styles.subtitle}>{schedule}</Text>}
+                    {studentCount !== undefined && (
+                        <Text style={styles.caption}>{studentCount} alunos</Text>
+                    )}
+                </View>
             </View>
 
-            <TouchableOpacity style={styles.callButton} onPress={onStartCall}>
-                <Text style={styles.buttonText}>Iniciar chamada</Text>
+            <TouchableOpacity
+                style={[styles.callButton, !isActive && styles.callButtonDisabled]}
+                onPress={onStartCall}
+                disabled={!isActive}
+            >
+                <Text style={[styles.callButtonText, !isActive && styles.callButtonTextDisabled]}>
+                    {isActive ? 'Iniciar Chamada' : 'Fora de Horário'}
+                </Text>
             </TouchableOpacity>
         </TouchableOpacity>
     );
-};
+}
 
 const styles = StyleSheet.create({
-    card: {
-        backgroundColor: '#fff',
-        borderRadius: 16, // Slightly more rounded
-        padding: 20, // Increased padding
-        marginBottom: 20, // Increased margin
+    container: {
+        width: '100%',
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        padding: 16,
+        flexDirection: 'column',
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: '#F0F0F0',
+
+        // Soft, modern shadow
         shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 4, // More pronounced shadow
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 5,
-        elevation: 6,
-        // Removed flexDirection: 'row' to stack items vertically
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
     },
-    infoContainer: {
-        marginBottom: 15, // Space between info and button
+
+    topSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 16,
+        gap: 16,
     },
-    disciplineName: {
-        fontSize: 22, // Larger font size
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 8,
+
+    avatar: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: '#F3E5F5', // Lighter purple
+        alignItems: 'center',
+        justifyContent: 'center',
     },
-    scheduleText: {
+
+    avatarText: {
+        color: colors.primary,
+        fontWeight: '700',
+        fontSize: 18,
+    },
+
+    textContainer: {
+        flex: 1,
+        gap: 2,
+    },
+
+    title: {
         fontSize: 16,
-        color: '#555',
-        marginBottom: 4,
+        fontWeight: '600',
+        color: '#1D1B20',
+        letterSpacing: 0.1,
     },
-    studentCountText: {
+
+    subtitle: {
         fontSize: 14,
-        color: '#777',
-        marginTop: 4,
+        color: '#757575',
     },
+
+    caption: {
+        fontSize: 12,
+        color: '#9E9E9E',
+    },
+
     callButton: {
-        backgroundColor: '#4CAF50',
-        paddingVertical: 12,
-        paddingHorizontal: 20,
-        borderRadius: 10,
-        alignItems: 'center', // Center text
-        width: '100%', // Full width button
+        backgroundColor: colors.primary,
+        borderRadius: 100, // Pill shape for button
+        paddingVertical: 12, // Taller button
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '100%',
+        elevation: 1,
     },
-    buttonText: {
+
+    callButtonDisabled: {
+        backgroundColor: '#E0E0E0',
+        elevation: 0,
+    },
+
+    callButtonText: {
         color: '#fff',
-        fontWeight: 'bold',
-        fontSize: 16,
+        fontSize: 14,
+        fontWeight: '600',
+        letterSpacing: 0.5,
+    },
+
+    callButtonTextDisabled: {
+        color: '#9E9E9E',
     },
 });

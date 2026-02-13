@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     closeButton: {
-        backgroundColor: '#2196F3',
+        backgroundColor: '#4F378B', // Purple to match theme
         borderRadius: 20,
         padding: 10,
         elevation: 2,

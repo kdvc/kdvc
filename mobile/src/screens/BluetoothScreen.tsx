@@ -1,100 +1,76 @@
-import 'react-native-get-random-values';
 import React, { useState, useEffect } from 'react';
 import {
-    FlatList,
+    View,
     Text,
     TouchableOpacity,
-    StyleSheet,
+    FlatList,
     Alert,
-    View,
-    Button,
+    StyleSheet,
+    Platform,
+    PermissionsAndroid,
 } from 'react-native';
-import { usePermissions } from '../shared/hooks/usePermissions';
-import { useScanner } from '../domain/bluetooth/useScanner';
-import { useAdvertiser } from '../domain/bluetooth/useAdvertiser';
-import { Provider as PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-
-import { ScannedDevice } from '../ble/BleScanner';
-import CreateForm from '../../CreateForm';
+import { Provider as PaperProvider } from 'react-native-paper';
+import { useNavigation } from '@react-navigation/native';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { stringify as uuidStringify } from 'uuid';
 
+import CreateForm from '../../CreateForm';
+import { useScanner } from '../domain/bluetooth/useScanner';
+import { useAdvertiser } from '../domain/bluetooth/useAdvertiser';
+
+const eventNames: Record<string, string> = {
+    // Add known UUIDs here if any
+    "f2642cf0-3b14-471d-891f-cfb52863ccd7": "KDVC Event"
+};
+
 export default function BluetoothScreen() {
+    const navigation = useNavigation<any>();
+    const [allowed, setAllowed] = useState(false);
     const [formResponse, setResponse] = useState<any>(null);
-    const [eventNames, setEventNames] = useState<Record<string, string>>({});
-    const [errorName, setErrorName] = useState<string | null>(null);
-
-    const { allowed } = usePermissions();
-
-    const { devices, isScanning, startScan, stopScan } = useScanner({ allowed });
-    const { isAdvertising, startAdvertising, stopAdvertising } = useAdvertiser({
-        allowed,
-    });
-
-    const handleDevicePress = (d: ScannedDevice) => {
-        return d;
-    };
-
-    const getEventName = async (id: string, address: string) => {
-        console.log('getting event name of:', id);
-        try {
-            const res = await fetch(`http://192.168.1.107:8000/class/${id}/name`, {
-                // Android emulator: 10.0.2.2, iOS simulator: localhost
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            console.log('verificando: ', res);
-
-            if (!res.ok) {
-                const text = await res.text();
-                console.log('deu merda:', text);
-                throw new Error(`Status ${res.status}: ${text}`);
-            }
-
-            console.log('pegando json');
-            const json = await res.json();
-            console.log('stringando json:', json);
-            const name = json.name ?? JSON.stringify(json);
-
-            console.log('got name: ', name);
-
-            setEventNames(prev => ({
-                ...prev,
-                [id]: name,
-            }));
-
-            return name;
-        } catch (e: any) {
-            setErrorName(e.message ?? 'Unknown error');
-        }
-    };
 
     useEffect(() => {
-        const fetchNames = async () => {
-            for (const d of devices) {
-                console.log('fetch name device:', d);
-                if (
-                    d.manufacturerData &&
-                    d.manufacturerData.length === 17 &&
-                    !eventNames[d.address]
-                ) {
-                    const id = uuidStringify(new Uint8Array(d.manufacturerData.slice(1)));
-                    await getEventName(id, d.address);
-                }
+        const checkPermissions = async () => {
+            if (Platform.OS === 'android') {
+                const granted = await PermissionsAndroid.requestMultiple([
+                    PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+                    PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+                    PermissionsAndroid.PERMISSIONS.BLUETOOTH_ADVERTISE,
+                    PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+                ]);
+
+                // Check if all requested permissions are granted
+                const allGranted = Object.values(granted).every(
+                    permission => permission === PermissionsAndroid.RESULTS.GRANTED
+                );
+
+                setAllowed(allGranted);
+            } else {
+                setAllowed(true);
             }
         };
+        checkPermissions();
+    }, []);
 
-        fetchNames();
-    }, [devices]);
+    const { devices, isScanning, startScan, stopScan } = useScanner({ allowed });
+    const { isAdvertising, startAdvertising, stopAdvertising } = useAdvertiser({ allowed });
+
+    const handleDevicePress = (device: any) => {
+        console.log('Device pressed:', device);
+    };
 
     return (
         <SafeAreaProvider>
             <PaperProvider>
                 <SafeAreaView style={styles.container}>
-                    <Text style={styles.header}>BLE Scanner & Advertiser</Text>
+                    {/* Custom Header with Back Button */}
+                    <View style={styles.headerContainer}>
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                            <Icon name="arrow-left" size={24} color="#000" />
+                        </TouchableOpacity>
+                        <Text style={styles.header}>BLE Scanner & Advertiser</Text>
+                        <View style={{ width: 24 }} />
+                    </View>
 
                     <View style={styles.buttonContainer}>
                         <TouchableOpacity
@@ -155,7 +131,12 @@ export default function BluetoothScreen() {
                                         item.manufacturerData &&
                                         item.manufacturerData.length == 17
                                     ) {
-                                        const id = uuidStringify(new Uint8Array(item.manufacturerData.slice(1)));
+                                        let id = "";
+                                        try {
+                                            id = uuidStringify(new Uint8Array(item.manufacturerData.slice(1)));
+                                        } catch (e) {
+                                            console.log("Error UUID", e);
+                                        }
                                         const eventName = eventNames[id];
                                         console.log('event names:', eventNames);
 
@@ -199,7 +180,16 @@ export default function BluetoothScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, padding: 16, backgroundColor: '#fafafa' },
-    header: { fontSize: 22, fontWeight: 'bold', marginBottom: 16 },
+    headerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 16,
+    },
+    backButton: {
+        padding: 4,
+    },
+    header: { fontSize: 22, fontWeight: 'bold' },
     buttonContainer: {
         flexDirection: 'row',
         justifyContent: 'space-around',

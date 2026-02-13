@@ -31,7 +31,7 @@ export default function StudentHomeScreen() {
             isAttendanceActive={item.isAttendanceActive}
             isRegistered={item.isRegistered}
             onPress={() =>
-              navigation.navigate('ClassDetails', {
+              navigation.navigate('StudentClassDetails', {
                 classId: item.id,
               })}
             onRegisterPresence={() => {

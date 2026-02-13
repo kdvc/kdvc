@@ -4,6 +4,8 @@ import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DisciplineCard } from '../../components/DisciplineCard';
 import { AttendanceModal } from '../../components/AttendanceModal';
+import { AddClassModal } from '../../components/AddClassModal';
+import ProfessorHomeHeader from '../../components/ProfessorHomeHeader';
 
 interface Discipline {
     id: string;
@@ -23,6 +25,8 @@ const mockDisciplines: Discipline[] = [
     { id: '2', name: 'Cálculo I', schedule: 'Quarta 14:00 - 16:00', studentCount: 35 },
     { id: '3', name: 'Álgebra Linear', schedule: 'Sexta 10:00 - 12:00', studentCount: 28 },
     { id: '4', name: 'Física I', schedule: 'Terça 16:00 - 18:00', studentCount: 30 },
+    // Demo class for Thursday night (assuming current time is around 22:00)
+    { id: '5', name: 'Projeto Final', schedule: 'Quinta 20:00 - 23:00', studentCount: 15 },
 ];
 
 const mockStudentsData: Student[] = [
@@ -36,6 +40,7 @@ const mockStudentsData: Student[] = [
 export default function ProfessorHomeScreen() {
     const navigation = useNavigation<any>();
     const [modalVisible, setModalVisible] = useState(false);
+    const [addClassModalVisible, setAddClassModalVisible] = useState(false);
     const [selectedDiscipline, setSelectedDiscipline] = useState<string>('');
     const [students, setStudents] = useState<Student[]>(mockStudentsData);
 
@@ -57,8 +62,39 @@ export default function ProfessorHomeScreen() {
         );
     };
 
+    const handleAddClass = () => {
+        setAddClassModalVisible(true);
+    };
+
+    const handleSaveClass = (data: { name: string; schedule: string; file: any }) => {
+        console.log('New Class Data:', data);
+        Alert.alert('Sucesso', `Turma "${data.name}" criada com sucesso!`);
+        setAddClassModalVisible(false);
+        // Here you would typically call an API or update the local list
+    };
+
+    const isClassActive = (schedule: string): boolean => {
+        const now = new Date();
+        const days = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+        const currentDay = days[now.getDay()];
+
+        const parts = schedule.split(' ');
+        // Expected format: "Day HH:mm - HH:mm"
+        if (parts.length < 4) return false;
+
+        const scheduleDay = parts[0];
+        const startTime = parts[1];
+        const endTime = parts[3];
+
+        if (currentDay !== scheduleDay) return false;
+
+        const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        return currentTime >= startTime && currentTime <= endTime;
+    };
+
     return (
         <SafeAreaView style={styles.container}>
+            <ProfessorHomeHeader onAddClass={handleAddClass} />
 
             <FlatList
                 data={mockDisciplines}
@@ -68,28 +104,22 @@ export default function ProfessorHomeScreen() {
                         name={item.name}
                         schedule={item.schedule}
                         studentCount={item.studentCount}
+                        isActive={isClassActive(item.schedule)}
                         onStartCall={() => handleStartCall(item.name)}
                         onPress={() => navigation.navigate('ClassDetails', { discipline: item })}
                     />
                 )}
                 contentContainerStyle={styles.listContainer}
-                ListFooterComponent={
-                    <View style={styles.footerContainer}>
-                        <TouchableOpacity
-                            style={[styles.actionButton, styles.addClassButton]}
-                            onPress={() => Alert.alert('Adicionar Turma', 'Funcionalidade de adicionar turma em breve!')}
-                        >
-                            <Text style={styles.buttonText}>+ Adicionar Turma</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={styles.actionButton}
-                            onPress={() => navigation.navigate('Bluetooth')}
-                        >
-                            <Text style={styles.buttonText}>Acessar Scanner Bluetooth</Text>
-                        </TouchableOpacity>
-                    </View>
-                }
+                // ListFooterComponent={
+                //     <View style={styles.footerContainer}>
+                //         <TouchableOpacity
+                //             style={styles.actionButton}
+                //             onPress={() => navigation.navigate('Bluetooth')}
+                //         >
+                //             <Text style={styles.buttonText}>Acessar Scanner Bluetooth</Text>
+                //         </TouchableOpacity>
+                //     </View>
+                // }
             />
 
             <AttendanceModal
@@ -99,6 +129,12 @@ export default function ProfessorHomeScreen() {
                 onClose={() => setModalVisible(false)}
                 onSetPresence={handleSetPresence}
             />
+
+            <AddClassModal
+                visible={addClassModalVisible}
+                onClose={() => setAddClassModalVisible(false)}
+                onSave={handleSaveClass}
+            />
         </SafeAreaView>
     );
 }
@@ -106,47 +142,31 @@ export default function ProfessorHomeScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#ffffffff', // Light Blue background
-    },
-    header: {
-        padding: 20,
-        alignItems: 'center',
-    },
-    title: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: '#1565C0',
-    },
-    subtitle: {
-        fontSize: 16,
-        color: '#0D47A1',
-        marginTop: 5,
+        backgroundColor: '#FEF7FF', // Student background color
     },
     listContainer: {
-        padding: 20,
-        paddingTop: 0,
+        paddingHorizontal: 24,
+        paddingTop: 16,
+        gap: 16,
     },
     footerContainer: {
-        marginTop: 10,
-        marginBottom: 20,
+        marginTop: 20,
+        marginBottom: 40,
         width: '100%',
-        alignItems: 'center',
-        gap: 15,
+        gap: 16,
     },
     actionButton: {
-        backgroundColor: '#1976D2',
-        paddingVertical: 15,
-        paddingHorizontal: 30,
-        borderRadius: 25,
-        width: '100%',
+        backgroundColor: '#4F378B', // Primary Purple
+        paddingVertical: 16,
+        borderRadius: 100, // Pill shape like Material 3
         alignItems: 'center',
-    },
-    addClassButton: {
-        backgroundColor: '#4CAF50', // Green button for adding
+        justifyContent: 'center',
+        elevation: 2,
     },
     buttonText: {
-        color: '#fff',
+        color: '#FFFFFF',
         fontSize: 16,
-        fontWeight: 'bold',
+        fontWeight: '600',
+        letterSpacing: 0.1,
     },
 });
