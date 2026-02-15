@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { useNavigation } from '@react-navigation/native';
 
 const colors = {
   background: '#FEF7FF',
@@ -9,22 +10,33 @@ const colors = {
 };
 
 export default function Header() {
+  const navigation = useNavigation<any>();
+
   return (
     <View style={styles.container}>
-
       <View style={styles.headerContent}>
-        <View>
+
+        {/* Left: Back Button */}
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.navigate('Home')}
+        >
+          <MaterialIcons name="arrow-back" size={24} color={colors.primary} />
+        </TouchableOpacity>
+
+        {/* Center: Greeting */}
+        <View style={styles.textContainer}>
           <Text style={styles.greeting}>Olá, Estudante</Text>
-          <Text style={styles.subGreeting}>Bem-vindo de volta!</Text>
         </View>
 
-        <TouchableOpacity style={styles.avatarContainer}>
-          <MaterialCommunityIcons
-            name="account-outline"
-            size={28}
+        {/* Right: Avatar */}
+        <View style={styles.avatarContainer}>
+          <MaterialIcons
+            name="person"
+            size={24}
             color={colors.primary}
           />
-        </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -33,30 +45,37 @@ export default function Header() {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.background,
-    marginBottom: 20, // Increased margin
+    marginBottom: 10, // Reduced margin
     paddingTop: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
   },
   headerContent: {
-    height: 64,
+    height: 56, // Reduced height
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between', // Space between text and avatar
-    paddingHorizontal: 24, // Increased padding
+    justifyContent: 'space-between',
+    paddingHorizontal: 16, // Reduced padding
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+  },
+  textContainer: {
+    flex: 1,
+    alignItems: 'center',
   },
   greeting: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#1D1B20',
   },
-  subGreeting: {
-    fontSize: 14,
-    color: '#49454F',
-    marginTop: 2,
-  },
   avatarContainer: {
-    width: 48, // Slightly larger
-    height: 48,
-    borderRadius: 24,
+    width: 40, // Reduced size
+    height: 40,
+    borderRadius: 20,
     backgroundColor: colors.genericAvatar,
     justifyContent: 'center',
     alignItems: 'center',
