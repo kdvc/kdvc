@@ -1,5 +1,5 @@
 // android/app/src/main/java/com/mobile/ble/BleScannerModule.kt
-package com.mobile.ble
+package com.kdvc.mobile.ble
 
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.le.*

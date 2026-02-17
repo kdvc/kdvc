@@ -1,5 +1,5 @@
 // android/app/src/main/java/com/yourapp/ble/BleBroadcasterPackage.kt
-package com.mobile.ble
+package com.kdvc.mobile.ble
 
 import com.facebook.react.ReactPackage
 import com.facebook.react.bridge.ReactApplicationContext
