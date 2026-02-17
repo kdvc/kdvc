@@ -66,12 +66,12 @@ export function DisciplineCard({
             </View>
 
             <TouchableOpacity
-                style={[styles.callButton, !isActive && styles.callButtonDisabled]}
+                style={[styles.callButton, isActive && styles.callButtonDisabled]}
                 onPress={onStartCall}
-                disabled={!isActive}
+                // disabled={!isActive}
             >
-                <Text style={[styles.callButtonText, !isActive && styles.callButtonTextDisabled]}>
-                    {isActive ? 'Iniciar Chamada' : 'Fora de Horário'}
+                <Text style={[styles.callButtonText, isActive && styles.callButtonTextDisabled]}>
+                    {true ? 'Iniciar Chamada' : 'Fora de Horário'}
                 </Text>
             </TouchableOpacity>
         </TouchableOpacity>

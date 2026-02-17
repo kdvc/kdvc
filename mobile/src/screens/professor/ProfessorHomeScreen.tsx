@@ -22,7 +22,7 @@ interface Student {
 
 const mockDisciplines: Discipline[] = [
     { id: '1', name: 'Matemática Discreta', schedule: 'Segunda 08:00 - 10:00', studentCount: 42 },
-    { id: '2', name: 'Cálculo I', schedule: 'Quarta 14:00 - 16:00', studentCount: 35 },
+    { id: '2', name: 'Cálculo I', schedule: 'Quarta 12:00 - 16:00', studentCount: 35 },
     { id: '3', name: 'Álgebra Linear', schedule: 'Sexta 10:00 - 12:00', studentCount: 28 },
     { id: '4', name: 'Física I', schedule: 'Terça 16:00 - 18:00', studentCount: 30 },
     // Demo class for Thursday night (assuming current time is around 22:00)
@@ -89,7 +89,8 @@ export default function ProfessorHomeScreen() {
         if (currentDay !== scheduleDay) return false;
 
         const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-        return currentTime >= startTime && currentTime <= endTime;
+        // return currentTime >= startTime && currentTime <= endTime;
+        return true;
     };
 
     return (
