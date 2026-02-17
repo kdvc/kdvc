@@ -1,9 +1,18 @@
-import { Body, Controller, Get, Post, Query, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query,
+  Req,
+  Res,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Request, Response } from 'express';
 import { ApiTags, ApiOperation, ApiQuery, ApiBody } from '@nestjs/swagger';
 import { Authenticated } from './authenticated.decorator';
 import { AuthService } from './auth.service';
-import { LoginDto } from '../dto/auth.dto';
+import { GoogleLoginDto, LoginDto, RefreshTokenDto } from '../dto/auth.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -56,10 +65,41 @@ export class AuthController {
     return user;
   }
 
-  @Get('profile')
+  @Get('me')
   @Authenticated()
   @ApiOperation({ summary: 'Get current user profile' })
   getProfile(@Req() req: Request) {
     return req.user;
+  }
+
+  @Post('google/login')
+  @ApiOperation({
+    summary:
+      'Login with a Google id_token (from mobile) — returns internal JWT tokens',
+  })
+  async googleLogin(@Req() req: Request, @Body() body: GoogleLoginDto) {
+    // Prefer Authorization header, fallback to body
+    const authHeader = req.headers.authorization;
+    let idToken: string | undefined;
+
+    if (authHeader?.startsWith('Bearer ')) {
+      idToken = authHeader.slice(7);
+    } else if (body.idToken) {
+      idToken = body.idToken;
+    }
+
+    if (!idToken) {
+      throw new UnauthorizedException(
+        'id_token must be provided via Authorization Bearer header or request body',
+      );
+    }
+
+    return this.authService.loginWithGoogleIdToken(idToken);
+  }
+
+  @Post('refresh')
+  @ApiOperation({ summary: 'Exchange a refresh token for a new access token' })
+  async refresh(@Body() body: RefreshTokenDto) {
+    return this.authService.refreshAccessToken(body.refresh_token);
   }
 }
