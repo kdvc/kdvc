@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, Alert, Platform } from 'react-native';
-import { pick, types, isCancel } from '@react-native-documents/picker';
+import { pick, types, isErrorWithCode, errorCodes } from '@react-native-documents/picker';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 interface AddClassModalProps {
@@ -31,7 +31,7 @@ export const AddClassModal: React.FC<AddClassModalProps> = ({ visible, onClose, 
             });
             setFile(result);
         } catch (err) {
-            if (isCancel(err)) {
+            if (isErrorWithCode(err) && err.code === errorCodes.OPERATION_CANCELED) {
                 // User cancelled the picker, do nothing
             } else {
                 Alert.alert('Erro', 'Falha ao selecionar arquivo');

@@ -50,17 +50,23 @@ export default function LoginScreen() {
     const signIn = async () => {
         try {
             await GoogleSignin.hasPlayServices();
-            // const userInfo = await GoogleSignin.signIn();
+            await GoogleSignin.signIn();
 
-            // On success, check for saved role
-            const savedRole = await AsyncStorage.getItem('userRole');
-
-            if (savedRole === 'professor') {
-                navigation.replace('ProfessorHome');
-            } else if (savedRole === 'student') {
-                navigation.replace('StudentHome');
+            if (isLogin) {
+                // Login Flow: Check for existing role
+                const savedRole = await AsyncStorage.getItem('userRole');
+                if (savedRole === 'professor') {
+                    navigation.replace('ProfessorHome');
+                } else if (savedRole === 'student') {
+                    navigation.replace('StudentHome');
+                } else {
+                    Alert.alert(
+                        'Perfil não encontrado',
+                        'Não encontramos um perfil vinculado neste dispositivo. Se é seu primeiro acesso, escolha "Crie sua conta".'
+                    );
+                }
             } else {
-                // First time setup or role not selected
+                // Register Flow: Go to Role Selection
                 navigation.replace('Home');
             }
 
@@ -70,14 +76,18 @@ export default function LoginScreen() {
             } else if (error.code === statusCodes.IN_PROGRESS) {
                 // in progress
             } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-                // play services not available
+                Alert.alert('Erro', 'Google Play Services não está disponível.');
             } else {
-                // Fallback for demo (Development only)
-                const savedRole = await AsyncStorage.getItem('userRole');
-                if (savedRole === 'professor') {
-                    navigation.replace('ProfessorHome');
-                } else if (savedRole === 'student') {
-                    navigation.replace('StudentHome');
+                // Fallback / Dev mode checks
+                if (isLogin) {
+                    const savedRole = await AsyncStorage.getItem('userRole');
+                    if (savedRole === 'professor') {
+                        navigation.replace('ProfessorHome');
+                    } else if (savedRole === 'student') {
+                        navigation.replace('StudentHome');
+                    } else {
+                        Alert.alert('Dev: Perfil não encontrado', 'Cadastre-se primeiro.');
+                    }
                 } else {
                     navigation.replace('Home');
                 }
