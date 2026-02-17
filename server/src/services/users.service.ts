@@ -1,28 +1,30 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import { Role } from '../../prisma/generated/prisma/client';
 import { PrismaService } from '../database/prisma.service';
-
-export interface CreateUserDto {
-  name: string;
-  email: string;
-  password: string;
-  role: Role;
-}
-
-export interface UpdateUserDto {
-  name?: string;
-  email?: string;
-  password?: string;
-  role?: Role;
-}
+import { CreateUserDto, UpdateUserDto } from '../dto/users.dto';
 
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(data: CreateUserDto) {
+    const existing = await this.prisma.user.findUnique({
+      where: { email: data.email },
+    });
+    if (existing) {
+      throw new ConflictException(
+        `User with email ${data.email} already exists`,
+      );
+    }
+
+    const hashedPassword = await bcrypt.hash(data.password, 10);
     return this.prisma.user.create({
-      data,
+      data: { ...data, password: hashedPassword },
     });
   }
 
@@ -63,7 +65,18 @@ export class UsersService {
   }
 
   async update(id: string, data: UpdateUserDto) {
-    await this.findOne(id); // Check if exists
+    await this.findOne(id);
+
+    if (data.email) {
+      const existing = await this.prisma.user.findUnique({
+        where: { email: data.email },
+      });
+      if (existing && existing.id !== id) {
+        throw new ConflictException(
+          `User with email ${data.email} already exists`,
+        );
+      }
+    }
 
     return this.prisma.user.update({
       where: { id },
@@ -76,6 +89,23 @@ export class UsersService {
 
     return this.prisma.user.delete({
       where: { id },
+    });
+  }
+
+  async findByEmail(email: string) {
+    return this.prisma.user.findUnique({
+      where: { email },
+    });
+  }
+
+  async createFromGoogle(data: { email: string; name: string }) {
+    return this.prisma.user.create({
+      data: {
+        email: data.email,
+        name: data.name,
+        password: '',
+        role: Role.STUDENT, // Default role
+      },
     });
   }
 }

@@ -1,22 +1,15 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { UsersService } from './users.service';
-
-export interface CreateClassDto {
-  topic: string;
-  date: Date;
-  courseId: string;
-}
-
-export interface UpdateClassDto {
-  topic?: string;
-  date?: Date;
-  courseId?: string;
-}
-
-export interface RegisterAttendanceDto {
-  studentId: string;
-}
+import {
+  CreateClassDto,
+  UpdateClassDto,
+  RegisterAttendanceDto,
+} from '../dto/classes.dto';
 
 @Injectable()
 export class ClassesService {
@@ -124,7 +117,9 @@ export class ClassesService {
     });
 
     if (existingAttendance) {
-      throw new BadRequestException('Attendance already registered for this student in this class');
+      throw new BadRequestException(
+        'Attendance already registered for this student in this class',
+      );
     }
 
     return this.prisma.attendance.create({
@@ -153,7 +148,9 @@ export class ClassesService {
     });
 
     if (!attendance) {
-      throw new NotFoundException('Attendance not found for this student in this class');
+      throw new NotFoundException(
+        'Attendance not found for this student in this class',
+      );
     }
 
     return this.prisma.attendance.delete({
