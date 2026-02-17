@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { getStudentClasses } from '../services/mockApi';
+import { apiFetch } from '../services/api';
 
 export function useStudentClasses() {
   return useQuery({
     queryKey: ['studentClasses'],
-    queryFn: getStudentClasses,
+    queryFn: () => apiFetch<any[]>('/courses'),
   });
 }

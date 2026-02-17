@@ -1,5 +1,6 @@
 import 'react-native-get-random-values';
-import React from 'react';
+import React, { useEffect } from 'react';
+import { loadTokens } from './src/services/authStore';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -18,6 +19,10 @@ const Stack = createNativeStackNavigator();
 const queryClient = new QueryClient();
 
 export default function App() {
+  useEffect(() => {
+    loadTokens();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>

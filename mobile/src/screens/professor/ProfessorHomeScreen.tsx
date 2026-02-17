@@ -8,69 +8,121 @@ import { AddClassModal } from '../../components/AddClassModal';
 import ProfessorHomeHeader from '../../components/ProfessorHomeHeader';
 import { useProfessorDisciplines } from '../../hooks/useProfessorDisciplines';
 import { useProfessorStudents } from '../../hooks/useProfessorStudents';
-import type { Student } from '../../services/mockApi';
+import { useCreateCourse } from '../../hooks/useCreateCourse';
+import { apiFetch } from '../../services/api';
+import RNFS from 'react-native-fs';
 
 export default function ProfessorHomeScreen() {
   const navigation = useNavigation<any>();
   const [modalVisible, setModalVisible] = useState(false);
   const [addClassModalVisible, setAddClassModalVisible] = useState(false);
   const [selectedDiscipline, setSelectedDiscipline] = useState<string>('');
-  const [students, setStudents] = useState<Student[]>([]);
+  const [selectedDisciplineId, setSelectedDisciplineId] = useState<string>('');
+  const [currentClassId, setCurrentClassId] = useState<string>('');
+  const [students, setStudents] = useState<any[]>([]);
 
   const { data: disciplines = [] } = useProfessorDisciplines();
-  const { data: initialStudents = [] } = useProfessorStudents();
+  const { data: initialStudents = [] } =
+    useProfessorStudents(selectedDisciplineId);
+  const { mutateAsync: createCourse } = useCreateCourse();
 
-  const handleStartCall = (disciplineName: string) => {
+  const handleStartCall = async (
+    disciplineId: string,
+    disciplineName: string,
+  ) => {
+    setSelectedDisciplineId(disciplineId);
     setSelectedDiscipline(disciplineName);
-    // Reset presence for new call
-    const resetStudents = initialStudents.map(s => ({ ...s, present: false }));
-    setStudents(resetStudents);
-    setModalVisible(true);
+
+    try {
+      // Create a new class session for this attendance call
+      const newClass = await apiFetch<{ id: string }>('/classes', {
+        method: 'POST',
+        body: JSON.stringify({
+          topic: `Chamada - ${disciplineName}`,
+          date: new Date().toISOString(),
+          courseId: disciplineId,
+        }),
+      });
+      setCurrentClassId(newClass.id);
+
+      // Reset presence for new call
+      const resetStudents = initialStudents.map((s: any) => ({
+        ...s,
+        present: false,
+      }));
+      setStudents(resetStudents);
+      setModalVisible(true);
+    } catch (error) {
+      console.error('Failed to create class session', error);
+      Alert.alert('Erro', 'Não foi possível iniciar a chamada.');
+    }
   };
 
-  const handleSetPresence = (studentId: string, present: boolean) => {
+  const handleSetPresence = async (studentId: string, present: boolean) => {
+    // Optimistic update
     setStudents(prevStudents =>
       prevStudents.map(student =>
-        student.id === studentId ? { ...student, present: present } : student,
+        student.id === studentId ? { ...student, present } : student,
       ),
     );
+
+    try {
+      if (present) {
+        await apiFetch(`/classes/${currentClassId}/attendance`, {
+          method: 'POST',
+          body: JSON.stringify({ studentId }),
+        });
+      } else {
+        await apiFetch(`/classes/${currentClassId}/attendance/${studentId}`, {
+          method: 'DELETE',
+        });
+      }
+    } catch (error) {
+      console.error('Failed to update attendance', error);
+      // Rollback
+      setStudents(prevStudents =>
+        prevStudents.map(student =>
+          student.id === studentId
+            ? { ...student, present: !present }
+            : student,
+        ),
+      );
+      Alert.alert('Erro', 'Não foi possível registrar a presença.');
+    }
   };
 
   const handleAddClass = () => {
     setAddClassModalVisible(true);
   };
 
-  const handleSaveClass = (data: {
+  const handleSaveClass = async (data: {
     name: string;
     schedule: string;
     file: any;
   }) => {
-    console.log('New Class Data:', data);
-    Alert.alert('Sucesso', `Turma "${data.name}" criada com sucesso!`);
-    setAddClassModalVisible(false);
-  };
+    try {
+      // Read emails from the attached file
+      let emails: string[] = [];
+      if (data.file?.uri) {
+        const content = await RNFS.readFile(data.file.uri, 'utf8');
+        emails = content
+          .split(/[\n,;]+/)
+          .map((e: string) => e.trim())
+          .filter((e: string) => e.includes('@'));
+      }
 
-  const isClassActive = (schedule: string): boolean => {
-    const now = new Date();
-    const days = [
-      'Domingo',
-      'Segunda',
-      'Terça',
-      'Quarta',
-      'Quinta',
-      'Sexta',
-      'Sábado',
-    ];
-    const currentDay = days[now.getDay()];
+      await createCourse({
+        name: data.name,
+        description: data.schedule,
+        studentEmails: emails,
+      });
 
-    const parts = schedule.split(' ');
-    if (parts.length < 4) return false;
-
-    const scheduleDay = parts[0];
-
-    if (currentDay !== scheduleDay) return false;
-
-    return true;
+      setAddClassModalVisible(false);
+      Alert.alert('Sucesso', `Turma "${data.name}" criada com sucesso!`);
+    } catch (error: any) {
+      console.error('Failed to create course', error);
+      Alert.alert('Erro', 'Não foi possível criar a turma. Tente novamente.');
+    }
   };
 
   return (
@@ -84,9 +136,9 @@ export default function ProfessorHomeScreen() {
           <DisciplineCard
             name={item.name}
             schedule={item.schedule}
+            isActive={true}
             studentCount={item.studentCount}
-            isActive={isClassActive(item.schedule)}
-            onStartCall={() => handleStartCall(item.name)}
+            onStartCall={() => handleStartCall(item.id, item.name)}
             onPress={() =>
               navigation.navigate('ClassDetails', { discipline: item })
             }

@@ -18,8 +18,11 @@ export class AuthService {
 
   async validateGoogleUser(details: { email: string; name: string }) {
     const user = await this.usersService.findByEmail(details.email);
-    if (user) return user;
-    return this.usersService.createFromGoogle(details);
+    if (user) return { user, created: false };
+    return {
+      user: await this.usersService.createFromGoogle(details),
+      created: true,
+    };
   }
 
   /**
@@ -85,13 +88,15 @@ export class AuthService {
    * and returns internal access_token + refresh_token.
    */
   async loginWithGoogleIdToken(idToken: string) {
-    const user = await this.validateAndFindUserFromIdToken(idToken);
+    const { user, created } =
+      await this.validateAndFindUserFromIdToken(idToken);
 
     const access_token = this.signLocalToken(user);
     const refresh_token = this.signRefreshToken(user);
 
     return {
       user: { ...user, password: undefined },
+      created,
       access_token,
       refresh_token,
     };

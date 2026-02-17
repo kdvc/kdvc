@@ -16,9 +16,12 @@ import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useLogin } from '../hooks/useLogin';
 
 export default function LoginScreen() {
   const navigation = useNavigation<any>();
+
+  const { mutateAsync: login } = useLogin();
 
   const checkExistingLogin = useCallback(async () => {
     try {
@@ -63,17 +66,16 @@ export default function LoginScreen() {
       console.log('Starting sign in...');
 
       await GoogleSignin.hasPlayServices();
-      const { type } = await GoogleSignin.signIn();
-      if (type !== 'success') {
+      const { type, data } = await GoogleSignin.signIn();
+      if (type !== 'success' || !data?.idToken) {
         throw new Error();
       }
 
-      // On success, check for saved role
-      const savedRole = await AsyncStorage.getItem('userRole');
+      const { user, created } = await login(data.idToken);
 
-      if (savedRole === 'professor') {
+      if (!created && user.role === 'TEACHER') {
         navigation.replace('ProfessorHome');
-      } else if (savedRole === 'student') {
+      } else if (!created && user.role === 'STUDENT') {
         navigation.replace('StudentHome');
       } else {
         // First time setup or role not selected

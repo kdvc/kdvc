@@ -1,9 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
-import { getProfessorStudents } from '../services/mockApi';
+import { apiFetch } from '../services/api';
 
-export function useProfessorStudents() {
+export function useProfessorStudents(courseId: string) {
   return useQuery({
-    queryKey: ['professorStudents'],
-    queryFn: getProfessorStudents,
+    queryKey: ['professorStudents', courseId],
+    queryFn: async () => {
+      const course = await apiFetch<any>(`/courses/${courseId}`);
+      return course.students ?? [];
+    },
+    enabled: !!courseId,
   });
 }

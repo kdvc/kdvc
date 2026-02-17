@@ -24,15 +24,19 @@ export default function ClassDetailsScreen() {
   const { discipline } = route.params || {};
   const [activeTab, setActiveTab] = useState<TabType>('students');
 
-  const { data: classStudents = [] } = useProfessorClassStudents();
-  const { data: attendanceHistory = [] } = useProfessorAttendanceHistory();
+  const { data: classStudents = [] } = useProfessorClassStudents(
+    discipline?.id ?? '',
+  );
+  const { data: attendanceHistory = [] } = useProfessorAttendanceHistory(
+    discipline?.id ?? '',
+  );
 
   const handleExport = async () => {
     try {
       let csvContent =
         'Matrícula,Nome,Total de Presenças,Total de Aulas,Percentual\n';
 
-      classStudents.forEach(student => {
+      classStudents.forEach((student: any) => {
         const totalClasses = 50;
         const presents = Math.floor(Math.random() * 10) + 40;
         const percentage = ((presents / totalClasses) * 100).toFixed(1);
@@ -59,7 +63,7 @@ export default function ClassDetailsScreen() {
 
       let csvContent = `Matrícula,Nome,Presença (${attendance.date})\n`;
 
-      classStudents.forEach(student => {
+      classStudents.forEach((student: any) => {
         const isPresent = Math.random() > 0.1 ? 'Presente' : 'Ausente';
         csvContent += `${student.enrollmentId},${student.name},${isPresent}\n`;
       });

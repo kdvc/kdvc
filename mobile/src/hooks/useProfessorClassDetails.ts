@@ -1,19 +1,24 @@
 import { useQuery } from '@tanstack/react-query';
-import {
-  getProfessorClassStudents,
-  getProfessorAttendanceHistory,
-} from '../services/mockApi';
+import { apiFetch } from '../services/api';
 
-export function useProfessorClassStudents() {
+export function useProfessorClassStudents(courseId: string) {
   return useQuery({
-    queryKey: ['professorClassStudents'],
-    queryFn: getProfessorClassStudents,
+    queryKey: ['professorClassStudents', courseId],
+    queryFn: async () => {
+      const course = await apiFetch<any>(`/courses/${courseId}`);
+      return course.students ?? [];
+    },
+    enabled: !!courseId,
   });
 }
 
-export function useProfessorAttendanceHistory() {
+export function useProfessorAttendanceHistory(courseId: string) {
   return useQuery({
-    queryKey: ['professorAttendanceHistory'],
-    queryFn: getProfessorAttendanceHistory,
+    queryKey: ['professorAttendanceHistory', courseId],
+    queryFn: async () => {
+      const classes = await apiFetch<any[]>(`/courses/${courseId}/classes`);
+      return classes;
+    },
+    enabled: !!courseId,
   });
 }

@@ -30,8 +30,15 @@ export class CoursesService {
     });
   }
 
-  async findAll() {
+  async findAll(studentId?: string) {
     return this.prisma.course.findMany({
+      where: {
+        students: {
+          some: {
+            studentId,
+          },
+        },
+      },
       include: {
         teacher: true,
         students: {

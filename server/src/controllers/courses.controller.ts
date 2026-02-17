@@ -67,8 +67,10 @@ export class CoursesController {
     status: 200,
     description: 'List of all courses with teachers and students',
   })
-  findAll() {
-    return this.coursesService.findAll();
+  findAll(@Req() { user }: Request) {
+    return this.coursesService.findAll(
+      user.role === Role.STUDENT ? user.id : undefined,
+    );
   }
 
   @Get(':id')
