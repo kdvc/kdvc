@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const colors = {
   background: '#FEF7FF',
@@ -15,11 +17,18 @@ export default function Header() {
   return (
     <View style={styles.container}>
       <View style={styles.headerContent}>
-
         {/* Left: Back Button */}
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => navigation.navigate('Home')}
+          onPress={async () => {
+            try {
+              await GoogleSignin.signOut();
+              await AsyncStorage.removeItem('userRole');
+            } catch (e) {
+              console.error(e);
+            }
+            navigation.replace('Login');
+          }}
         >
           <MaterialIcons name="arrow-back" size={24} color={colors.primary} />
         </TouchableOpacity>
@@ -31,11 +40,7 @@ export default function Header() {
 
         {/* Right: Avatar */}
         <View style={styles.avatarContainer}>
-          <MaterialIcons
-            name="person"
-            size={24}
-            color={colors.primary}
-          />
+          <MaterialIcons name="person" size={24} color={colors.primary} />
         </View>
       </View>
     </View>

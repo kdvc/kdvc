@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -11,8 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 
 import PresenceCard from '../../components/PresenceCard';
-// import PrimaryButton from '../../components/PrimaryButton'; // Unused
-import { getClassById } from '../../services/mockApi';
+import { useClassById } from '../../hooks/useClassById';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 export default function ClassDetailsScreen() {
@@ -20,20 +19,9 @@ export default function ClassDetailsScreen() {
   const navigation = useNavigation<any>();
   const { classId } = route.params;
 
-  const [classData, setClassData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: classData, isLoading } = useClassById(classId);
 
-  useEffect(() => {
-    async function loadClass() {
-      const data = await getClassById(classId);
-      setClassData(data);
-      setLoading(false);
-    }
-
-    loadClass();
-  }, [classId]);
-
-  if (loading || !classData) {
+  if (isLoading || !classData) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#4F378B" />
@@ -73,8 +61,11 @@ function ClassDetailsHeader({
 }) {
   return (
     <View style={headerStyles.container}>
-      <TouchableOpacity onPress={() => navigation.goBack()} style={headerStyles.backButton}>
-        <Icon name="arrow-back" size={24} color='#4F378B' />
+      <TouchableOpacity
+        onPress={() => navigation.goBack()}
+        style={headerStyles.backButton}
+      >
+        <Icon name="arrow-back" size={24} color="#4F378B" />
       </TouchableOpacity>
 
       <Text style={headerStyles.title}>{title}</Text>
@@ -92,17 +83,17 @@ const styles = StyleSheet.create({
   content: {
     padding: 24,
     paddingBottom: 40,
-    paddingTop: 16, // Reduced top padding
+    paddingTop: 16,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#1D1B20',
-    marginTop: 0, // Removed margin top as header handles spacing
+    marginTop: 0,
     marginBottom: 16,
   },
   history: {
-    gap: 0, // Gap handled by card margin
+    gap: 0,
   },
   loadingContainer: {
     flex: 1,
@@ -114,7 +105,7 @@ const styles = StyleSheet.create({
 
 const headerStyles = StyleSheet.create({
   container: {
-    height: 56, // Reduced height
+    height: 56,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -123,7 +114,7 @@ const headerStyles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
     marginTop: 0,
-    marginBottom: 0
+    marginBottom: 0,
   },
   backButton: {
     width: 40,
