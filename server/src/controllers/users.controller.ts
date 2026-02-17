@@ -7,8 +7,16 @@ import {
   Param,
   Delete,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
-import { UsersService, CreateUserDto, UpdateUserDto } from '../services/users.service';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBody,
+} from '@nestjs/swagger';
+import { UsersService } from '../services/users.service';
+import { CreateUserDto, UpdateUserDto } from '../dto/users.dto';
+import { Authenticated } from '../auth/authenticated.decorator';
 
 @ApiTags('users')
 @Controller('users')
@@ -25,7 +33,11 @@ export class UsersController {
         name: { type: 'string', example: 'John Doe' },
         email: { type: 'string', example: 'john@example.com' },
         password: { type: 'string', example: 'password123' },
-        role: { type: 'string', enum: ['TEACHER', 'STUDENT'], example: 'STUDENT' },
+        role: {
+          type: 'string',
+          enum: ['TEACHER', 'STUDENT'],
+          example: 'STUDENT',
+        },
       },
       required: ['name', 'email', 'password', 'role'],
     },
@@ -37,8 +49,13 @@ export class UsersController {
   }
 
   @Get(':id')
+  @Authenticated()
   @ApiOperation({ summary: 'Get a user by ID' })
-  @ApiParam({ name: 'id', description: 'User ID', example: '123e4567-e89b-12d3-a456-426614174000' })
+  @ApiParam({
+    name: 'id',
+    description: 'User ID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
   @ApiResponse({ status: 200, description: 'User found' })
   @ApiResponse({ status: 404, description: 'User not found' })
   findOne(@Param('id') id: string) {
@@ -46,8 +63,13 @@ export class UsersController {
   }
 
   @Patch(':id')
+  @Authenticated()
   @ApiOperation({ summary: 'Update a user' })
-  @ApiParam({ name: 'id', description: 'User ID', example: '123e4567-e89b-12d3-a456-426614174000' })
+  @ApiParam({
+    name: 'id',
+    description: 'User ID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
   @ApiBody({
     description: 'User data to update',
     schema: {
@@ -55,8 +77,11 @@ export class UsersController {
       properties: {
         name: { type: 'string', example: 'John Doe' },
         email: { type: 'string', example: 'john@example.com' },
-        password: { type: 'string', example: 'newpassword123' },
-        role: { type: 'string', enum: ['TEACHER', 'STUDENT'], example: 'STUDENT' },
+        role: {
+          type: 'string',
+          enum: ['TEACHER', 'STUDENT'],
+          example: 'STUDENT',
+        },
       },
     },
   })
@@ -67,8 +92,13 @@ export class UsersController {
   }
 
   @Delete(':id')
+  @Authenticated()
   @ApiOperation({ summary: 'Delete a user' })
-  @ApiParam({ name: 'id', description: 'User ID', example: '123e4567-e89b-12d3-a456-426614174000' })
+  @ApiParam({
+    name: 'id',
+    description: 'User ID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
   @ApiResponse({ status: 200, description: 'User deleted successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
   remove(@Param('id') id: string) {
