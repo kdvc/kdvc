@@ -5,8 +5,8 @@ export function useProfessorClassStudents(courseId: string) {
   return useQuery({
     queryKey: ['professorClassStudents', courseId],
     queryFn: async () => {
-      const course = await apiFetch<any>(`/courses/${courseId}`);
-      return course.students ?? [];
+      const students = await apiFetch<any[]>(`/courses/${courseId}/students`);
+      return students ?? [];
     },
     enabled: !!courseId,
   });

@@ -37,7 +37,7 @@ export default function ClassDetailsScreen() {
         <Text style={styles.sectionTitle}>Histórico de Presença</Text>
 
         <View style={styles.history}>
-          {classData.attendanceHistory.map((item: any) => (
+          {classData.classes.map((item: any) => (
             <PresenceCard
               key={item.id}
               date={item.date}

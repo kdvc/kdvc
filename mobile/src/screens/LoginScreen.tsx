@@ -1,12 +1,5 @@
 import React, { useCallback, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  StatusBar,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, StatusBar, Alert } from 'react-native';
 import {
   GoogleSignin,
   GoogleSigninButton,
@@ -129,17 +122,7 @@ export default function LoginScreen() {
               disabled={false}
               style={styles.googleButton}
             />
-
-            <TouchableOpacity
-              style={styles.toggleButton}
-              onPress={() => navigation.navigate('Home')}
-            >
-              <Text style={styles.toggleText}>
-                Não tem uma conta? Cadastre-se
-              </Text>
-            </TouchableOpacity>
           </View>
-
           <Text style={styles.versionText}>Versão 1.0.0</Text>
         </View>
       </View>

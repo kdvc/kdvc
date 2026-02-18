@@ -34,36 +34,48 @@ export default function ProfessorHomeScreen() {
     useProfessorStudents(selectedDisciplineId);
   const { mutateAsync: createCourse } = useCreateCourse();
 
-  const handleStartCall = async (
-    disciplineId: string,
-    disciplineName: string,
-  ) => {
-    setSelectedDisciplineId(disciplineId);
-    setSelectedDiscipline(disciplineName);
+  const handleStartCall = (disciplineId: string, disciplineName: string) => {
+    Alert.alert(
+      'Iniciar Chamada',
+      `Deseja iniciar a chamada para a turma ${disciplineName}?`,
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Iniciar',
+          onPress: async () => {
+            setSelectedDisciplineId(disciplineId);
+            setSelectedDiscipline(disciplineName);
 
-    try {
-      // Create a new class session for this attendance call
-      const newClass = await apiFetch<{ id: string }>('/classes', {
-        method: 'POST',
-        body: JSON.stringify({
-          topic: `Chamada - ${disciplineName}`,
-          date: new Date().toISOString(),
-          courseId: disciplineId,
-        }),
-      });
-      setCurrentClassId(newClass.id);
+            try {
+              // Create a new class session for this attendance call
+              const newClass = await apiFetch<{ id: string }>('/classes', {
+                method: 'POST',
+                body: JSON.stringify({
+                  topic: `Chamada - ${disciplineName}`,
+                  date: new Date().toISOString(),
+                  courseId: disciplineId,
+                }),
+              });
+              setCurrentClassId(newClass.id);
 
-      // Reset presence for new call
-      const resetStudents = initialStudents.map((s: any) => ({
-        ...s,
-        present: false,
-      }));
-      setStudents(resetStudents);
-      setModalVisible(true);
-    } catch (error) {
-      console.error('Failed to create class session', error);
-      Alert.alert('Erro', 'Não foi possível iniciar a chamada.');
-    }
+              // Reset presence for new call
+              const resetStudents = initialStudents.map((s: any) => ({
+                ...s,
+                present: false,
+              }));
+              setStudents(resetStudents);
+              setModalVisible(true);
+            } catch (error) {
+              console.error('Failed to create class session', error);
+              Alert.alert('Erro', 'Não foi possível iniciar a chamada.');
+            }
+          },
+        },
+      ],
+    );
   };
 
   const handleSetPresence = async (studentId: string, present: boolean) => {
