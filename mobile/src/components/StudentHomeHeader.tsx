@@ -4,6 +4,7 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { clearTokens } from '../services/authStore';
 
 const colors = {
   background: '#FEF7FF',
@@ -24,6 +25,7 @@ export default function Header() {
             try {
               await GoogleSignin.signOut();
               await AsyncStorage.removeItem('userRole');
+              await clearTokens();
             } catch (e) {
               console.error(e);
             }

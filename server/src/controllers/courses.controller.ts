@@ -47,6 +47,22 @@ export class CoursesController {
           type: 'string',
           example: 'Basic concepts of programming',
         },
+        schedules: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              dayOfWeek: { type: 'number', example: 1 },
+              startTime: { type: 'string', example: '08:00' },
+              endTime: { type: 'string', example: '10:00' },
+            },
+          },
+        },
+        emails: {
+          type: 'array',
+          items: { type: 'string', format: 'email' },
+          example: ['student1@example.com'],
+        },
       },
       required: ['name', 'teacherId'],
     },
@@ -55,10 +71,7 @@ export class CoursesController {
   @ApiResponse({ status: 400, description: 'Invalid input data' })
   @ApiResponse({ status: 404, description: 'Teacher not found' })
   create(@Body() createCourseDto: CreateCourseDto, @Req() { user }: Request) {
-    return this.coursesService.create({
-      ...createCourseDto,
-      teacherId: user.id,
-    });
+    return this.coursesService.create(createCourseDto, user.id);
   }
 
   @Get()
@@ -67,8 +80,10 @@ export class CoursesController {
     status: 200,
     description: 'List of all courses with teachers and students',
   })
-  findAll() {
-    return this.coursesService.findAll();
+  findAll(@Req() { user }: Request) {
+    return this.coursesService.findAll(
+      user.role === Role.STUDENT ? user.id : undefined,
+    );
   }
 
   @Get(':id')
@@ -81,8 +96,8 @@ export class CoursesController {
   })
   @ApiResponse({ status: 200, description: 'Course found' })
   @ApiResponse({ status: 404, description: 'Course not found' })
-  findOne(@Param('id') id: string) {
-    return this.coursesService.findOne(id);
+  findOne(@Param('id') id: string, @Req() { user }: Request) {
+    return this.coursesService.findOne(id, user);
   }
 
   @Patch(':id')
@@ -162,6 +177,23 @@ export class CoursesController {
   @ApiResponse({ status: 404, description: 'Course or student not found' })
   addStudent(@Param('id') id: string, @Body() addStudentDto: AddStudentDto) {
     return this.coursesService.addStudent(id, addStudentDto);
+  }
+
+  @Get(':id/students')
+  @Authenticated(Role.TEACHER)
+  @ApiOperation({ summary: 'Get all students of a course' })
+  @ApiParam({
+    name: 'id',
+    description: 'Course ID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of students in the course',
+  })
+  @ApiResponse({ status: 404, description: 'Course not found' })
+  findStudents(@Param('id') id: string, @Req() { user }: Request) {
+    return this.coursesService.findStudents(id, user.id);
   }
 
   @Post(':id/students/batch')

@@ -15,6 +15,8 @@ import {
   useProfessorClassStudents,
   useProfessorAttendanceHistory,
 } from '../../hooks/useProfessorClassDetails';
+import { AddStudentModal } from '../../components/AddStudentModal';
+import { useAddStudents } from '../../hooks/useAddStudents';
 
 type TabType = 'students' | 'attendance';
 
@@ -24,15 +26,37 @@ export default function ClassDetailsScreen() {
   const { discipline } = route.params || {};
   const [activeTab, setActiveTab] = useState<TabType>('students');
 
-  const { data: classStudents = [] } = useProfessorClassStudents();
-  const { data: attendanceHistory = [] } = useProfessorAttendanceHistory();
+  const { data: classStudents = [] } = useProfessorClassStudents(
+    discipline?.id ?? '',
+  );
+  const { data: attendanceHistory = [] } = useProfessorAttendanceHistory(
+    discipline?.id ?? '',
+  );
+
+  const [addStudentModalVisible, setAddStudentModalVisible] = useState(false);
+  const { mutate: addStudents, isPending: isAddingStudents } = useAddStudents();
+
+  const handleAddStudents = (emails: string[]) => {
+    addStudents(
+      { courseId: discipline?.id, emails },
+      {
+        onSuccess: () => {
+          Alert.alert('Sucesso', 'Alunos adicionados com sucesso!');
+          setAddStudentModalVisible(false);
+        },
+        onError: () => {
+          Alert.alert('Erro', 'Não foi possível adicionar os alunos.');
+        },
+      },
+    );
+  };
 
   const handleExport = async () => {
     try {
       let csvContent =
         'Matrícula,Nome,Total de Presenças,Total de Aulas,Percentual\n';
 
-      classStudents.forEach(student => {
+      classStudents.forEach((student: any) => {
         const totalClasses = 50;
         const presents = Math.floor(Math.random() * 10) + 40;
         const percentage = ((presents / totalClasses) * 100).toFixed(1);
@@ -59,7 +83,7 @@ export default function ClassDetailsScreen() {
 
       let csvContent = `Matrícula,Nome,Presença (${attendance.date})\n`;
 
-      classStudents.forEach(student => {
+      classStudents.forEach((student: any) => {
         const isPresent = Math.random() > 0.1 ? 'Presente' : 'Ausente';
         csvContent += `${student.enrollmentId},${student.name},${isPresent}\n`;
       });
@@ -206,6 +230,22 @@ export default function ClassDetailsScreen() {
           ? renderStudentsList()
           : renderAttendanceList()}
       </View>
+
+      {activeTab === 'students' && (
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => setAddStudentModalVisible(true)}
+        >
+          <Icon name="add" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+      )}
+
+      <AddStudentModal
+        visible={addStudentModalVisible}
+        onClose={() => setAddStudentModalVisible(false)}
+        onAdd={handleAddStudents}
+        isLoading={isAddingStudents}
+      />
     </SafeAreaView>
   );
 }
@@ -382,5 +422,21 @@ const styles = StyleSheet.create({
     color: '#EA1D2C',
     fontSize: 15,
     fontWeight: 'bold',
+  },
+  fab: {
+    position: 'absolute',
+    right: 16,
+    bottom: 80,
+    backgroundColor: '#4F378B',
+    width: 80,
+    height: 80,
+    borderRadius: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
 });

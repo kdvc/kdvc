@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { getProfessorDisciplines } from '../services/mockApi';
+import { apiFetch } from '../services/api';
 
 export function useProfessorDisciplines() {
   return useQuery({
     queryKey: ['professorDisciplines'],
-    queryFn: getProfessorDisciplines,
+    queryFn: () => apiFetch<any[]>('/courses'),
   });
 }

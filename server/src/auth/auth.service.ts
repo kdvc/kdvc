@@ -18,8 +18,30 @@ export class AuthService {
 
   async validateGoogleUser(details: { email: string; name: string }) {
     const user = await this.usersService.findByEmail(details.email);
-    if (user) return user;
-    return this.usersService.createFromGoogle(details);
+    if (user) return { user, created: false };
+    return {
+      user: await this.usersService.createFromGoogle(details),
+      created: true,
+    };
+  }
+
+  /**
+   * Verifies a Google id_token and finds/creates the corresponding user.
+   * Shared by both the OAuth callback and the mobile login flow.
+   */
+  private async validateAndFindUserFromIdToken(idToken: string) {
+    const payload = await verifyGoogleToken(idToken);
+
+    if (!payload.email_verified) {
+      throw new UnauthorizedException('Email not verified by Google');
+    }
+
+    const user = await this.validateGoogleUser({
+      email: payload.email,
+      name: payload.name ?? payload.email,
+    });
+
+    return user;
   }
 
   async authenticateWithGoogle(code: string) {
@@ -51,24 +73,64 @@ export class AuthService {
       throw new UnauthorizedException('No id_token in Google response');
     }
 
-    // 2. Verify the ID token against Google's public keys
-    const payload = await verifyGoogleToken(tokens.id_token);
-
-    if (!payload.email_verified) {
-      throw new UnauthorizedException('Email not verified by Google');
-    }
-
-    // 3. Find or create user
-    const user = await this.validateGoogleUser({
-      email: payload.email,
-      name: payload.name ?? payload.email,
-    });
+    // 2. Verify & find/create user (reuses shared logic)
+    const user = await this.validateAndFindUserFromIdToken(tokens.id_token);
 
     return {
       user,
       id_token: tokens.id_token,
       refresh_token: tokens.refresh_token,
     };
+  }
+
+  /**
+   * Mobile login: receives a Google id_token directly, validates it,
+   * and returns internal access_token + refresh_token.
+   */
+  async loginWithGoogleIdToken(idToken: string) {
+    const { user, created } =
+      await this.validateAndFindUserFromIdToken(idToken);
+
+    const access_token = this.signLocalToken(user);
+    const refresh_token = this.signRefreshToken(user);
+
+    return {
+      user: { ...user, password: undefined },
+      created,
+      access_token,
+      refresh_token,
+    };
+  }
+
+  /**
+   * Exchanges a valid refresh_token for a new access_token.
+   */
+  async refreshAccessToken(refreshToken: string) {
+    const secret = process.env.JWT_SECRET_KEY;
+    if (!secret) {
+      throw new Error('JWT_SECRET_KEY is not configured');
+    }
+
+    let payload: { sub: string; type: string };
+    try {
+      payload = jwt.verify(refreshToken, secret, {
+        issuer: LOCAL_ISSUER,
+      }) as { sub: string; type: string };
+    } catch {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    if (payload.type !== 'refresh') {
+      throw new UnauthorizedException('Token is not a refresh token');
+    }
+
+    const user = await this.usersService.findOne(payload.sub);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const access_token = this.signLocalToken(user);
+    return { access_token };
   }
 
   async register(data: {
@@ -119,5 +181,17 @@ export class AuthService {
       secret,
       { issuer: LOCAL_ISSUER, expiresIn: '7d' },
     );
+  }
+
+  private signRefreshToken(user: { id: string }) {
+    const secret = process.env.JWT_SECRET_KEY;
+    if (!secret) {
+      throw new Error('JWT_SECRET_KEY is not configured');
+    }
+
+    return jwt.sign({ sub: user.id, type: 'refresh' }, secret, {
+      issuer: LOCAL_ISSUER,
+      expiresIn: '30d',
+    });
   }
 }

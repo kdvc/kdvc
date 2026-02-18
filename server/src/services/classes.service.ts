@@ -5,11 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { UsersService } from './users.service';
-import {
-  CreateClassDto,
-  UpdateClassDto,
-  RegisterAttendanceDto,
-} from '../dto/classes.dto';
+import { CreateClassDto, UpdateClassDto } from '../dto/classes.dto';
 
 @Injectable()
 export class ClassesService {
@@ -83,18 +79,18 @@ export class ClassesService {
     });
   }
 
-  async registerAttendance(classId: string, data: RegisterAttendanceDto) {
+  async registerAttendance(classId: string, studentId: string) {
     // Verify class exists
     const classEntity = await this.findOne(classId);
 
     // Verify student exists and has STUDENT role
-    await this.usersService.findStudent(data.studentId);
+    await this.usersService.findStudent(studentId);
 
     // Verify student is enrolled in the course
     const enrollment = await this.prisma.studentCourse.findUnique({
       where: {
         studentId_courseId: {
-          studentId: data.studentId,
+          studentId,
           courseId: classEntity.courseId,
         },
       },
@@ -102,7 +98,7 @@ export class ClassesService {
 
     if (!enrollment) {
       throw new BadRequestException(
-        `Student with ID ${data.studentId} is not enrolled in the course for this class`,
+        `Student with ID ${studentId} is not enrolled in the course for this class`,
       );
     }
 
@@ -111,7 +107,7 @@ export class ClassesService {
       where: {
         classId_studentId: {
           classId,
-          studentId: data.studentId,
+          studentId,
         },
       },
     });
@@ -125,7 +121,7 @@ export class ClassesService {
     return this.prisma.attendance.create({
       data: {
         classId,
-        studentId: data.studentId,
+        studentId,
       },
       include: {
         student: true,

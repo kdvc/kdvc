@@ -6,6 +6,8 @@ import {
   Patch,
   Param,
   Delete,
+  Req,
+  UnauthorizedException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,6 +19,7 @@ import {
 import { UsersService } from '../services/users.service';
 import { CreateUserDto, UpdateUserDto } from '../dto/users.dto';
 import { Authenticated } from '../auth/authenticated.decorator';
+import { Request } from 'express';
 
 @ApiTags('users')
 @Controller('users')
@@ -87,7 +90,15 @@ export class UsersController {
   })
   @ApiResponse({ status: 200, description: 'User updated successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserDto,
+    @Req() { user }: Request,
+  ) {
+    if (user.id !== id) {
+      throw new UnauthorizedException();
+    }
+
     return this.usersService.update(id, updateUserDto);
   }
 
@@ -101,7 +112,11 @@ export class UsersController {
   })
   @ApiResponse({ status: 200, description: 'User deleted successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  remove(@Param('id') id: string) {
+  remove(@Param('id') id: string, @Req() { user }: Request) {
+    if (user.id !== id) {
+      throw new UnauthorizedException();
+    }
+
     return this.usersService.remove(id);
   }
 }

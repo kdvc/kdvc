@@ -11,7 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 
 import PresenceCard from '../../components/PresenceCard';
-import { useClassById } from '../../hooks/useClassById';
+import { useCourseById } from '../../hooks/useClassById';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 export default function ClassDetailsScreen() {
@@ -19,7 +19,7 @@ export default function ClassDetailsScreen() {
   const navigation = useNavigation<any>();
   const { classId } = route.params;
 
-  const { data: classData, isLoading } = useClassById(classId);
+  const { data: classData, isLoading } = useCourseById(classId);
 
   if (isLoading || !classData) {
     return (
@@ -37,7 +37,7 @@ export default function ClassDetailsScreen() {
         <Text style={styles.sectionTitle}>Histórico de Presença</Text>
 
         <View style={styles.history}>
-          {classData.attendanceHistory.map((item: any) => (
+          {classData.classes.map((item: any) => (
             <PresenceCard
               key={item.id}
               date={item.date}

@@ -176,7 +176,7 @@ export class ClassesController {
       studentId = body.studentId;
     }
 
-    return this.classesService.registerAttendance(id, { studentId });
+    return this.classesService.registerAttendance(id, studentId);
   }
 
   @Delete(':id/attendance/:studentId')

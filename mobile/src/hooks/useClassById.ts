@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { getClassById } from '../services/mockApi';
+import { apiFetch } from '../services/api';
 
-export function useClassById(id: string) {
+export function useCourseById(id: string) {
   return useQuery({
-    queryKey: ['class', id],
-    queryFn: () => getClassById(id),
+    queryKey: ['course', id],
+    queryFn: () => apiFetch<any>(`/courses/${id}`),
     enabled: !!id,
   });
 }

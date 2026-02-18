@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { UsersService } from './users.service';
@@ -10,6 +11,7 @@ import {
   UpdateCourseDto,
   AddStudentDto,
 } from '../dto/courses.dto';
+import { User } from '../../prisma/generated/prisma/client';
 
 @Injectable()
 export class CoursesService {
@@ -18,20 +20,44 @@ export class CoursesService {
     private readonly usersService: UsersService,
   ) {}
 
-  async create(data: CreateCourseDto) {
-    await this.usersService.findTeacher(data.teacherId);
+  async create(courseData: CreateCourseDto, teacherId: string) {
+    await this.usersService.findTeacher(teacherId);
 
-    return this.prisma.course.create({
-      data,
+    const { emails, schedules, ...rest } = courseData;
+
+    const course = await this.prisma.course.create({
+      data: {
+        ...rest,
+        teacherId,
+        schedules: schedules
+          ? {
+              create: schedules.map((s) => ({
+                dayOfWeek: s.dayOfWeek,
+                startTime: s.startTime,
+                endTime: s.endTime,
+              })),
+            }
+          : undefined,
+      },
       include: {
         teacher: true,
         students: true,
+        schedules: true,
       },
     });
+
+    if (emails && emails.length > 0) {
+      await this.addStudentsByEmail(course.id, emails);
+    }
+
+    return course;
   }
 
-  async findAll() {
+  async findAll(studentId?: string) {
+    const where = studentId ? { students: { some: { studentId } } } : {}; // sem filtro se undefined
+
     return this.prisma.course.findMany({
+      where,
       include: {
         teacher: true,
         students: {
@@ -39,11 +65,12 @@ export class CoursesService {
             student: true,
           },
         },
+        schedules: true,
       },
     });
   }
 
-  async findOne(id: string) {
+  async findById(id: string) {
     const course = await this.prisma.course.findUnique({
       where: { id },
       include: {
@@ -53,6 +80,8 @@ export class CoursesService {
             student: true,
           },
         },
+        schedules: true,
+        classes: true,
       },
     });
 
@@ -63,8 +92,46 @@ export class CoursesService {
     return course;
   }
 
+  async findOne(id: string, user: User) {
+    const course = await this.findById(id);
+
+    if (user.role === 'TEACHER') {
+      if (course.teacherId !== user.id) {
+        throw new ForbiddenException('You are not the teacher of this course');
+      }
+      return course;
+    }
+
+    if (user.role === 'STUDENT') {
+      const isEnrolled = course.students.some((s) => s.studentId === user.id);
+      if (!isEnrolled) {
+        throw new ForbiddenException('You are not enrolled in this course');
+      }
+
+      // Fetch classes with attendance status for this student
+      const classesWithAttendance = await this.prisma.class.findMany({
+        where: { courseId: id },
+        include: {
+          attendances: {
+            where: { studentId: user.id },
+          },
+        },
+      });
+
+      return {
+        ...course,
+        classes: classesWithAttendance.map((c) => ({
+          ...c,
+          present: c.attendances.length > 0,
+        })),
+      };
+    }
+
+    throw new ForbiddenException();
+  }
+
   async update(id: string, data: UpdateCourseDto) {
-    await this.findOne(id); // Check if exists
+    await this.findById(id); // Check if exists
 
     return this.prisma.course.update({
       where: { id },
@@ -77,7 +144,7 @@ export class CoursesService {
   }
 
   async remove(id: string) {
-    await this.findOne(id); // Check if exists
+    await this.findById(id); // Check if exists
 
     return this.prisma.course.delete({
       where: { id },
@@ -86,7 +153,7 @@ export class CoursesService {
 
   async addStudent(courseId: string, data: AddStudentDto) {
     // Verify course exists
-    await this.findOne(courseId);
+    await this.findById(courseId);
 
     // Verify student exists and has STUDENT role
     await this.usersService.findStudent(data.studentId);
@@ -121,7 +188,7 @@ export class CoursesService {
 
   async removeStudent(courseId: string, studentId: string) {
     // Verify course exists
-    await this.findOne(courseId);
+    await this.findById(courseId);
 
     const enrollment = await this.prisma.studentCourse.findUnique({
       where: {
@@ -148,7 +215,7 @@ export class CoursesService {
 
   async addStudentsByEmail(courseId: string, emails: string[]) {
     // Verify course exists
-    await this.findOne(courseId);
+    await this.findById(courseId);
 
     // Find users by emails
     const users = await this.prisma.user.findMany({
@@ -204,5 +271,29 @@ export class CoursesService {
       message: `${studentsToAdd.length} students added successfully`,
       added: studentsToAdd.map((s) => s.email),
     };
+  }
+
+  async findStudents(courseId: string, teacherId: string) {
+    const course = await this.prisma.course.findUnique({
+      where: { id: courseId },
+      select: { teacherId: true },
+    });
+
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
+    if (course.teacherId !== teacherId) {
+      throw new ForbiddenException();
+    }
+
+    const students = await this.prisma.studentCourse.findMany({
+      where: { courseId },
+      include: {
+        student: true,
+      },
+    });
+
+    return students.map((s) => s.student);
   }
 }

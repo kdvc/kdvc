@@ -5,32 +5,40 @@ import {
   StyleSheet,
   TouchableOpacity,
   StatusBar,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { STORAGE_KEYS, getCurrentUser } from '../services/authStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useUpdateUser } from '../hooks/useUpdateUser';
 
 export default function HomeScreen() {
   // Acting as RoleSelectionScreen
   const navigation = useNavigation<any>();
+  const { mutateAsync: updateUser } = useUpdateUser();
 
   const handleRoleSelect = async (role: 'professor' | 'student') => {
+    const backendRole = role === 'professor' ? 'TEACHER' : 'STUDENT';
+    const user = await getCurrentUser();
+
     try {
-      await AsyncStorage.setItem('userRole', role);
+      if (user?.id) {
+        await updateUser({ id: user.id, data: { role: backendRole } });
+      }
+      await AsyncStorage.setItem(STORAGE_KEYS.ROLE, role);
       if (role === 'professor') {
         navigation.replace('ProfessorHome');
       } else {
         navigation.replace('StudentHome');
       }
     } catch (e) {
-      console.error('Failed to save role', e);
-      // Fallback navigation even if save fails
-      if (role === 'professor') {
-        navigation.replace('ProfessorHome');
-      } else {
-        navigation.replace('StudentHome');
-      }
+      console.error('Failed to update role', e);
+      Alert.alert(
+        'Erro',
+        'Não foi possível atualizar o papel. Tente novamente.',
+      );
     }
   };
 
