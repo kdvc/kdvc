@@ -18,27 +18,44 @@ export class CoursesService {
     private readonly usersService: UsersService,
   ) {}
 
-  async create(data: CreateCourseDto) {
-    await this.usersService.findTeacher(data.teacherId);
+  async create(courseData: CreateCourseDto, teacherId: string) {
+    await this.usersService.findTeacher(teacherId);
 
-    return this.prisma.course.create({
-      data,
+    const { emails, schedules, ...rest } = courseData;
+
+    const course = await this.prisma.course.create({
+      data: {
+        ...rest,
+        teacherId,
+        schedules: schedules
+          ? {
+              create: schedules.map((s) => ({
+                dayOfWeek: s.dayOfWeek,
+                startTime: s.startTime,
+                endTime: s.endTime,
+              })),
+            }
+          : undefined,
+      },
       include: {
         teacher: true,
         students: true,
+        schedules: true,
       },
     });
+
+    if (emails && emails.length > 0) {
+      await this.addStudentsByEmail(course.id, emails);
+    }
+
+    return course;
   }
 
   async findAll(studentId?: string) {
+    const where = studentId ? { students: { some: { studentId } } } : {}; // sem filtro se undefined
+
     return this.prisma.course.findMany({
-      where: {
-        students: {
-          some: {
-            studentId,
-          },
-        },
-      },
+      where,
       include: {
         teacher: true,
         students: {
@@ -46,6 +63,7 @@ export class CoursesService {
             student: true,
           },
         },
+        schedules: true,
       },
     });
   }
@@ -60,6 +78,7 @@ export class CoursesService {
             student: true,
           },
         },
+        schedules: true,
       },
     });
 

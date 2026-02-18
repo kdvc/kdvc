@@ -12,25 +12,24 @@ export function useCreateCourse() {
     mutationFn: async ({
       name,
       description,
+      schedules,
       studentEmails,
     }: {
       name: string;
       description?: string;
+      schedules?: { dayOfWeek: number; startTime: string; endTime: string }[];
       studentEmails?: string[];
     }) => {
-      // 1. Create the course
+      // Create the course with schedules and students in one go
       const course = await apiFetch<{ id: string }>('/courses', {
         method: 'POST',
-        body: JSON.stringify({ name, description }),
+        body: JSON.stringify({
+          name,
+          description,
+          schedules,
+          emails: studentEmails,
+        }),
       });
-
-      // 2. If student emails provided, add them in batch
-      if (studentEmails && studentEmails.length > 0) {
-        await apiFetch(`/courses/${course.id}/students/batch`, {
-          method: 'POST',
-          body: JSON.stringify({ emails: studentEmails }),
-        });
-      }
 
       return course;
     },

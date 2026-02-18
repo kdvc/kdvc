@@ -38,6 +38,17 @@ model Course {
 
   students StudentCourse[]
   classes  Class[]
+  schedules CourseSchedule[]
+}
+
+model CourseSchedule {
+  id        String @id @default(uuid())
+  dayOfWeek Int    // 0=Sun, 1=Mon, ..., 6=Sat
+  startTime String // "08:00"
+  endTime   String // "10:00"
+
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 }
 
 model StudentCourse {

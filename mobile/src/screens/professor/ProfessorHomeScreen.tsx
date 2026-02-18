@@ -12,6 +12,14 @@ import { useCreateCourse } from '../../hooks/useCreateCourse';
 import { apiFetch } from '../../services/api';
 import RNFS from 'react-native-fs';
 
+const formatSchedule = (schedules: any[]) => {
+  if (!schedules || schedules.length === 0) return 'Sem horário';
+  const dayMap = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+  return schedules
+    .map(s => `${dayMap[s.dayOfWeek]} ${s.startTime}-${s.endTime}`)
+    .join(', ');
+};
+
 export default function ProfessorHomeScreen() {
   const navigation = useNavigation<any>();
   const [modalVisible, setModalVisible] = useState(false);
@@ -97,7 +105,7 @@ export default function ProfessorHomeScreen() {
 
   const handleSaveClass = async (data: {
     name: string;
-    schedule: string;
+    schedules: { dayOfWeek: number; startTime: string; endTime: string }[];
     file: any;
   }) => {
     try {
@@ -113,7 +121,9 @@ export default function ProfessorHomeScreen() {
 
       await createCourse({
         name: data.name,
-        description: data.schedule,
+        // description is optional, using name as desc for now or empty? DTO has description?
+        // Let's just pass empty description if not collected
+        schedules: data.schedules,
         studentEmails: emails,
       });
 
@@ -135,7 +145,7 @@ export default function ProfessorHomeScreen() {
         renderItem={({ item }) => (
           <DisciplineCard
             name={item.name}
-            schedule={item.schedule}
+            schedule={formatSchedule(item.schedules)}
             isActive={true}
             studentCount={item.studentCount}
             onStartCall={() => handleStartCall(item.id, item.name)}
