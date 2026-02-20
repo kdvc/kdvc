@@ -1,7 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
 import { PrismaService } from '../database/prisma.service';
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { Role } from '../../prisma/generated/prisma/client';
 import * as bcrypt from 'bcrypt';
 
@@ -189,25 +193,101 @@ describe('UsersService', () => {
     });
   });
 
-  describe('createFromGoogle', () => {
-    it('should create user from google data', async () => {
-      const data = { email: 'g@test.com', name: 'Google User' };
-      prisma.user.create.mockResolvedValue({
-        ...data,
-        id: '1',
-        role: Role.STUDENT,
-      });
+  describe('validateEmailAndGetRole', () => {
+    it('should throw ForbiddenException for non-ufcg emails', () => {
+      expect(() => service.validateEmailAndGetRole('test@gmail.com')).toThrow(
+        ForbiddenException,
+      );
+    });
 
-      const result = await service.createFromGoogle(data);
+    it('should return STUDENT for @ccc.ufcg.edu.br', () => {
+      expect(service.validateEmailAndGetRole('student@ccc.ufcg.edu.br')).toBe(
+        Role.STUDENT,
+      );
+    });
+
+    it('should return TEACHER for @computacao.ufcg.edu.br', () => {
+      expect(
+        service.validateEmailAndGetRole('prof@computacao.ufcg.edu.br'),
+      ).toBe(Role.TEACHER);
+    });
+
+    it('should return TEACHER for @dsc.ufcg.edu.br', () => {
+      expect(service.validateEmailAndGetRole('prof@dsc.ufcg.edu.br')).toBe(
+        Role.TEACHER,
+      );
+    });
+
+    it('should return TEACHER for +1 alias', () => {
+      expect(service.validateEmailAndGetRole('prof+1@ccc.ufcg.edu.br')).toBe(
+        Role.TEACHER,
+      );
+    });
+
+    it('should throw ForbiddenException for generic ufcg emails (not ccc/computacao/dsc)', () => {
+      expect(() =>
+        service.validateEmailAndGetRole('student@ufcg.edu.br'),
+      ).toThrow(ForbiddenException);
+    });
+  });
+
+  describe('inferNameFromEmail', () => {
+    it('should infer name correctly from email', () => {
+      expect(service.inferNameFromEmail('gustavo.maia@ufcg.edu.br')).toBe(
+        'Gustavo Maia',
+      );
+    });
+
+    it('should handle single name', () => {
+      expect(service.inferNameFromEmail('gustavo@ufcg.edu.br')).toBe('Gustavo');
+    });
+
+    it('should ignore +1 alias in name', () => {
+      expect(service.inferNameFromEmail('gustavo.maia+1@ufcg.edu.br')).toBe(
+        'Gustavo Maia',
+      );
+    });
+  });
+
+  describe('createFromGoogle', () => {
+    it('should create user with inferred name and role', async () => {
+      const dto = { email: 'student@ccc.ufcg.edu.br', name: '' };
+      prisma.user.create.mockResolvedValue({
+        id: 'u1',
+        email: dto.email,
+        name: 'Student',
+        role: Role.STUDENT,
+      } as any);
+
+      await service.createFromGoogle(dto);
+
       expect(prisma.user.create).toHaveBeenCalledWith({
-        data: {
-          email: data.email,
-          name: data.name,
-          password: '',
+        data: expect.objectContaining({
+          email: dto.email,
           role: Role.STUDENT,
-        },
+          name: 'Student',
+        }),
       });
-      expect(result).toEqual({ ...data, id: '1', role: Role.STUDENT });
+    });
+
+    it('should use provided name if available', async () => {
+      const dto = { email: 'student@ccc.ufcg.edu.br', name: 'Valid Name' };
+      prisma.user.create.mockResolvedValue({
+        id: 'u1',
+        email: dto.email,
+        name: dto.name,
+        role: Role.STUDENT,
+      } as any);
+
+      await service.createFromGoogle(dto);
+
+      expect(prisma.user.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          email: dto.email,
+          name: 'Valid Name',
+          role: Role.STUDENT,
+        }),
+      });
     });
   });
 });

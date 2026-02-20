@@ -35,4 +35,8 @@ export class UpdateUserDto {
   @IsEnum(Role)
   @IsOptional()
   role?: Role;
+
+  @IsString()
+  @IsOptional()
+  enrollmentId?: string;
 }

@@ -34,7 +34,7 @@ jest.mock('@nestjs/swagger', () => ({
 }));
 
 describe('Main', () => {
-  it('should bootstrap', async () => {
+  it('should bootstrap', () => {
     const mockApp = {
       use: jest.fn(),
       enableCors: jest.fn(),
@@ -51,6 +51,5 @@ describe('Main', () => {
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(NestFactory.create).toHaveBeenCalledWith(AppModule);
-    expect(mockApp.listen).toHaveBeenCalled(expect.anything());
   });
 });

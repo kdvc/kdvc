@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { Role } from '../../prisma/generated/prisma/client';
@@ -98,14 +99,56 @@ export class UsersService {
     });
   }
 
-  async createFromGoogle(data: { email: string; name: string }) {
+  async createFromGoogle(data: { email: string; name?: string }) {
+    const role = this.validateEmailAndGetRole(data.email);
+    const name = data.name || this.inferNameFromEmail(data.email);
+
     return this.prisma.user.create({
       data: {
         email: data.email,
-        name: data.name,
+        name,
         password: '',
-        role: Role.STUDENT, // Default role
+        role,
       },
     });
+  }
+
+  validateEmailAndGetRole(email: string): Role {
+    if (!email.endsWith('ufcg.edu.br')) {
+      throw new ForbiddenException('Only @ufcg.edu.br emails are allowed');
+    }
+
+    const [localPart, domain] = email.split('@');
+
+    // Hack for testing/teachers: +1 in local part
+    // OR specific teacher domains
+    if (
+      localPart.includes('+1') ||
+      domain.includes('computacao') ||
+      domain.includes('dsc')
+    ) {
+      return Role.TEACHER;
+    }
+
+    if (domain.includes('ccc')) {
+      return Role.STUDENT;
+    }
+
+    // If it ends with ufcg.edu.br but doesn't match above roles, it's invalid for this system
+    // Per user: "não pode adicionar um email q não seja ccc como estudante"
+    throw new ForbiddenException(
+      'Email must be from @ccc (Student) or @computacao/@dsc (Teacher)',
+    );
+  }
+
+  inferNameFromEmail(email: string): string {
+    const localPart = email.split('@')[0];
+    // Remove +1 alias if present for name generation
+    const cleanLocal = localPart.replace('+1', '');
+
+    return cleanLocal
+      .split('.')
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
   }
 }

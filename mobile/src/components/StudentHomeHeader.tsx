@@ -12,7 +12,11 @@ const colors = {
   genericAvatar: '#EADDFF',
 };
 
-export default function Header() {
+interface HeaderProps {
+  onOpenProfile?: () => void;
+}
+
+export default function Header({ onOpenProfile }: HeaderProps) {
   const navigation = useNavigation<any>();
 
   return (
@@ -40,10 +44,14 @@ export default function Header() {
           <Text style={styles.greeting}>Olá, Estudante</Text>
         </View>
 
-        {/* Right: Avatar */}
-        <View style={styles.avatarContainer}>
+        {/* Right: Avatar/Profile */}
+        <TouchableOpacity
+          style={styles.avatarContainer}
+          onPress={onOpenProfile}
+          disabled={!onOpenProfile}
+        >
           <MaterialIcons name="person" size={24} color={colors.primary} />
-        </View>
+        </TouchableOpacity>
       </View>
     </View>
   );

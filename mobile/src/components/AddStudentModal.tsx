@@ -189,7 +189,8 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
 const styles = StyleSheet.create({
   centeredView: {
     flex: 1,
-    justifyContent: 'center',
+    paddingTop: 200,
+    justifyContent: 'flex-start',
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
   keyboardView: {
