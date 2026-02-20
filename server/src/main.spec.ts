@@ -34,7 +34,7 @@ jest.mock('@nestjs/swagger', () => ({
 }));
 
 describe('Main', () => {
-  it('should bootstrap', async () => {
+  it('should bootstrap', () => {
     const mockApp = {
       use: jest.fn(),
       enableCors: jest.fn(),

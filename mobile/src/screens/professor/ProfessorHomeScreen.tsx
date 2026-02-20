@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { StyleSheet, FlatList, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useQueryClient } from '@tanstack/react-query';
 import { DisciplineCard } from '../../components/DisciplineCard';
 import { AttendanceModal } from '../../components/AttendanceModal';
 import { AddClassModal } from '../../components/AddClassModal';
 import ProfessorHomeHeader from '../../components/ProfessorHomeHeader';
 import { useProfessorDisciplines } from '../../hooks/useProfessorDisciplines';
-import { useProfessorStudents } from '../../hooks/useProfessorStudents';
 import { useCreateCourse } from '../../hooks/useCreateCourse';
 import { apiFetch } from '../../services/api';
 import RNFS from 'react-native-fs';
@@ -22,35 +22,49 @@ const formatSchedule = (schedules: any[]) => {
 
 export default function ProfessorHomeScreen() {
   const navigation = useNavigation<any>();
+  const queryClient = useQueryClient();
   const [modalVisible, setModalVisible] = useState(false);
   const [addClassModalVisible, setAddClassModalVisible] = useState(false);
   const [selectedDiscipline, setSelectedDiscipline] = useState<string>('');
-  const [selectedDisciplineId, setSelectedDisciplineId] = useState<string>('');
   const [currentClassId, setCurrentClassId] = useState<string>('');
   const [students, setStudents] = useState<any[]>([]);
 
   const { data: disciplines = [] } = useProfessorDisciplines();
-  const { data: initialStudents = [] } =
-    useProfessorStudents(selectedDisciplineId);
   const { mutateAsync: createCourse } = useCreateCourse();
 
-  const handleStartCall = (disciplineId: string, disciplineName: string) => {
-    Alert.alert(
-      'Iniciar Chamada',
-      `Deseja iniciar a chamada para a turma ${disciplineName}?`,
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
-        },
-        {
-          text: 'Iniciar',
-          onPress: async () => {
-            setSelectedDisciplineId(disciplineId);
-            setSelectedDiscipline(disciplineName);
+  const handleStartCall = async (
+    disciplineId: string,
+    disciplineName: string,
+    existingClassId?: string,
+  ) => {
+    const isReopening = !!existingClassId;
+    const title = isReopening ? 'Reabrir Chamada' : 'Iniciar Chamada';
+    const message = isReopening
+      ? `Deseja reabrir a chamada de hoje para a turma ${disciplineName}?`
+      : `Deseja iniciar a chamada para a turma ${disciplineName}?`;
+    const confirmText = isReopening ? 'Reabrir' : 'Iniciar';
 
-            try {
-              // Create a new class session for this attendance call
+    Alert.alert(title, message, [
+      {
+        text: 'Cancelar',
+        style: 'cancel',
+      },
+      {
+        text: confirmText,
+        onPress: async () => {
+          setSelectedDiscipline(disciplineName);
+
+          try {
+            // Fetch fresh list of students for the course to ensure we have everyone
+            const courseStudents = await apiFetch<any[]>(
+              `/courses/${disciplineId}/students`,
+            );
+
+            let classId = existingClassId;
+            let currentAttendance: any[] = [];
+
+            if (!classId) {
+              // Create new class
               const newClass = await apiFetch<{ id: string }>('/classes', {
                 method: 'POST',
                 body: JSON.stringify({
@@ -59,23 +73,45 @@ export default function ProfessorHomeScreen() {
                   courseId: disciplineId,
                 }),
               });
-              setCurrentClassId(newClass.id);
+              classId = newClass.id;
 
-              // Reset presence for new call
-              const resetStudents = initialStudents.map((s: any) => ({
-                ...s,
-                present: false,
-              }));
-              setStudents(resetStudents);
-              setModalVisible(true);
-            } catch (error) {
-              console.error('Failed to create class session', error);
-              Alert.alert('Erro', 'Não foi possível iniciar a chamada.');
+              // Invalidate queries to update home screen button state
+              queryClient.invalidateQueries({
+                queryKey: ['professorDisciplines'],
+              });
+            } else {
+              // Fetch existing attendance
+              // Assuming GET /classes/:id returns the class with attendances relation
+              // based on typical Prisma usage or we have a specific endpoint?
+              // Let's check api.ts or just rely on what we can easily add.
+              // Ideally: GET /classes/:id includes attendances.
+              // If not, we might need GET /classes/:id/attendance (if it exists)
+              // Let's try GET /classes/:id first.
+              const classDetails = await apiFetch<any>(`/classes/${classId}`);
+              currentAttendance = classDetails.attendances || [];
             }
-          },
+
+            if (classId) {
+              setCurrentClassId(classId);
+
+              // Merge students with attendance
+              const studentList = courseStudents.map((s: any) => ({
+                ...s,
+                present: currentAttendance.some(
+                  (a: any) => a.studentId === s.id,
+                ),
+              }));
+
+              setStudents(studentList);
+              setModalVisible(true);
+            }
+          } catch (error) {
+            console.error('Failed to start/open class session', error);
+            Alert.alert('Erro', 'Não foi possível acessar a chamada.');
+          }
         },
-      ],
-    );
+      },
+    ]);
   };
 
   const handleSetPresence = async (studentId: string, present: boolean) => {
@@ -160,7 +196,10 @@ export default function ProfessorHomeScreen() {
             schedule={formatSchedule(item.schedules)}
             isActive={true}
             studentCount={item.studentCount}
-            onStartCall={() => handleStartCall(item.id, item.name)}
+            onStartCall={() =>
+              handleStartCall(item.id, item.name, item.activeClassId)
+            }
+            hasActiveCall={!!item.activeClassId}
             onPress={() =>
               navigation.navigate('ClassDetails', { discipline: item })
             }

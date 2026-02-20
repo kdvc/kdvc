@@ -22,6 +22,7 @@ interface DisciplineCardProps {
   onStartCall: () => void;
   onPress?: () => void;
   isActive?: boolean;
+  hasActiveCall?: boolean;
 }
 
 export function DisciplineCard({
@@ -31,6 +32,7 @@ export function DisciplineCard({
   onStartCall,
   onPress,
   isActive = true, // Default to true if not provided (backward compatibility)
+  hasActiveCall = false,
 }: DisciplineCardProps) {
   const avatarLabel = name
     .split(' ')
@@ -60,7 +62,11 @@ export function DisciplineCard({
       </View>
 
       <TouchableOpacity
-        style={[styles.callButton, !isActive && styles.callButtonDisabled]}
+        style={[
+          styles.callButton,
+          !isActive && styles.callButtonDisabled,
+          hasActiveCall && styles.reopenButton,
+        ]}
         onPress={onStartCall}
         disabled={!isActive}
       >
@@ -68,9 +74,14 @@ export function DisciplineCard({
           style={[
             styles.callButtonText,
             !isActive && styles.callButtonTextDisabled,
+            hasActiveCall && styles.reopenButtonText,
           ]}
         >
-          {isActive ? 'Iniciar Chamada' : 'Fora de Horário'}
+          {hasActiveCall
+            ? 'Reabrir Chamada'
+            : isActive
+            ? 'Iniciar Chamada'
+            : 'Fora de Horário'}
         </Text>
       </TouchableOpacity>
     </TouchableOpacity>
@@ -78,6 +89,7 @@ export function DisciplineCard({
 }
 
 const styles = StyleSheet.create({
+  // ... existing styles ...
   container: {
     width: '100%',
     backgroundColor: '#FFFFFF',
@@ -94,6 +106,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+  },
+
+  // ... verify other styles exist or use view_file first?
+  // I have the file content in history.
+  reopenButton: {
+    backgroundColor: '#FF9800', // Orange for reopen
+  },
+  reopenButtonText: {
+    color: '#FFF',
   },
 
   topSection: {

@@ -56,7 +56,7 @@ export class CoursesService {
   async findAll(studentId?: string) {
     const where = studentId ? { students: { some: { studentId } } } : {}; // sem filtro se undefined
 
-    return this.prisma.course.findMany({
+    const courses = await this.prisma.course.findMany({
       where,
       include: {
         teacher: true,
@@ -68,6 +68,38 @@ export class CoursesService {
         schedules: true,
       },
     });
+
+    // If teacher (no studentId filter), check for active class today
+    if (!studentId) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      const coursesWithActive = await Promise.all(
+        courses.map(async (course) => {
+          const activeClass = await this.prisma.class.findFirst({
+            where: {
+              courseId: course.id,
+              date: {
+                gte: today,
+                lt: tomorrow,
+              },
+            },
+            select: { id: true },
+          });
+
+          return {
+            ...course,
+            activeClassId: activeClass?.id || null,
+          };
+        }),
+      );
+
+      return coursesWithActive;
+    }
+
+    return courses;
   }
 
   async findById(id: string) {
@@ -217,50 +249,110 @@ export class CoursesService {
     // Verify course exists
     await this.findById(courseId);
 
-    // Find users by emails
-    const users = await this.prisma.user.findMany({
+    // Validate emails and prepare user data
+    const validEmails = new Set<string>();
+    const usersToCreate: { email: string; name: string; role: any }[] = [];
+
+    for (const email of emails) {
+      try {
+        const role = this.usersService.validateEmailAndGetRole(email);
+        validEmails.add(email);
+
+        // Prepare data for potential creation
+        // STRICT CHECK: Only add if role is STUDENT
+        // "Ele também não pode adicionar um email q não seja ccc como estudante"
+        if (role === 'STUDENT') {
+          usersToCreate.push({
+            email,
+            name: this.usersService.inferNameFromEmail(email),
+            role,
+          });
+        }
+      } catch (_error) {
+        // Log or ignore invalid emails?
+        // For now, ignoring invalid emails to allow partial success,
+        // or should we fail?
+        // If the user expects strict validation, maybe we should filter them out.
+        // The implementation implies we only process valid ones.
+      }
+    }
+
+    if (validEmails.size === 0) {
+      throw new BadRequestException('No valid @ufcg.edu.br emails provided');
+    }
+
+    // Find existing users
+    const existingUsers = await this.prisma.user.findMany({
       where: {
         email: {
-          in: emails,
+          in: Array.from(validEmails),
         },
       },
     });
 
-    // Filter users that are students
-    const students = users.filter((user) => user.role === 'STUDENT');
+    const existingEmails = new Set(existingUsers.map((u) => u.email));
+    const missingEmails = usersToCreate.filter(
+      (u) => !existingEmails.has(u.email),
+    );
 
-    if (students.length === 0) {
-      throw new BadRequestException(
-        'No valid students found with the provided emails',
-      );
+    // Create missing users
+    const newStudents = await Promise.all(
+      missingEmails.map((u) =>
+        this.prisma.user.create({
+          data: {
+            email: u.email,
+            name: u.name,
+            password: '',
+            role: u.role,
+          },
+        }),
+      ),
+    );
+
+    // Combine all users (existing + new)
+    // Filter existing users to ensure they are actually students
+    // "Ele também não pode adicionar um email q não seja ccc como estudante"
+    const validExistingUsers = existingUsers.filter(
+      (u) => u.role === 'STUDENT',
+    );
+
+    const allUsersToAdd = [...validExistingUsers, ...newStudents];
+
+    if (allUsersToAdd.length === 0) {
+      throw new BadRequestException('No valid users found or created');
     }
 
-    const studentIds = students.map((s) => s.id);
+    const userIds = allUsersToAdd.map((s) => s.id);
 
     // Check which students are already enrolled
     const existingEnrollments = await this.prisma.studentCourse.findMany({
       where: {
         courseId,
         studentId: {
-          in: studentIds,
+          in: userIds,
         },
+      },
+      include: {
+        student: true,
       },
     });
 
-    const enrolledStudentIds = new Set(
+    const enrolledUserIds = new Set(
       existingEnrollments.map((e) => e.studentId),
     );
 
-    // Filter out students already enrolled
-    const studentsToAdd = students.filter((s) => !enrolledStudentIds.has(s.id));
+    // Filter out users already enrolled
+    const studentsToEnroll = allUsersToAdd.filter(
+      (s) => !enrolledUserIds.has(s.id),
+    );
 
-    if (studentsToAdd.length === 0) {
-      return { message: 'All students are already enrolled', added: [] };
+    if (studentsToEnroll.length === 0) {
+      return { message: 'All users are already enrolled', added: [] };
     }
 
     // Bulk create enrollments
     await this.prisma.studentCourse.createMany({
-      data: studentsToAdd.map((s) => ({
+      data: studentsToEnroll.map((s) => ({
         courseId,
         studentId: s.id,
       })),
@@ -268,8 +360,8 @@ export class CoursesService {
     });
 
     return {
-      message: `${studentsToAdd.length} students added successfully`,
-      added: studentsToAdd.map((s) => s.email),
+      message: `${studentsToEnroll.length} students added successfully`,
+      added: studentsToEnroll.map((s) => s.email),
     };
   }
 

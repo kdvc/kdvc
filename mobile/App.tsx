@@ -8,7 +8,6 @@ import { Provider as PaperProvider } from 'react-native-paper';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import LoginScreen from './src/screens/LoginScreen';
-import HomeScreen from './src/screens/HomeScreen';
 import ProfessorHomeScreen from './src/screens/professor/ProfessorHomeScreen';
 import StudentHomeScreen from './src/screens/student/StudentHomeScreen';
 import BluetoothScreen from './src/screens/BluetoothScreen';
@@ -32,11 +31,6 @@ export default function App() {
               <Stack.Screen
                 name="Login"
                 component={LoginScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="Home"
-                component={HomeScreen}
                 options={{ headerShown: false }}
               />
               <Stack.Screen
