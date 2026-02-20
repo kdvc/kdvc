@@ -20,10 +20,16 @@ export type ScannedDevice = {
 
 export function startScan(
   onDeviceFound: (device: ScannedDevice) => void,
-  onError?: (error: any) => void
+  onError?: (error: any) => void,
 ) {
-  const deviceListener = eventEmitter.addListener('onDeviceFound', onDeviceFound);
-  const errorListener = eventEmitter.addListener('onScanFailed', onError || (() => {}));
+  const deviceListener = eventEmitter.addListener(
+    'onDeviceFound',
+    onDeviceFound,
+  );
+  const errorListener = eventEmitter.addListener(
+    'onScanFailed',
+    onError || (() => {}),
+  );
 
   BleScanner.startScan().catch(err => {
     console.error('startScan error:', err);

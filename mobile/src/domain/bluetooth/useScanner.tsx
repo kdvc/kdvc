@@ -1,5 +1,5 @@
 // src/domain/bluetooth/useScanner.ts
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { startScan, stopScan, ScannedDevice } from '../../ble/BleScanner';
 
 export type useScannerProps = {
@@ -19,7 +19,6 @@ export const useScanner = ({ allowed }: useScannerProps) => {
     const unsubscribe = startScan(
       device => {
         setDevices(prev => {
-          // Evitar duplicatas pelo endereço
           const exists = prev.find(d => d.address === device.address);
           if (exists) return prev;
           return [...prev, device];

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, FlatList, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { useProfessorDisciplines } from '../../hooks/useProfessorDisciplines';
 import { useCreateCourse } from '../../hooks/useCreateCourse';
 import { apiFetch } from '../../services/api';
 import RNFS from 'react-native-fs';
+import { useStartAttendance } from '../../domain/bluetooth/useStartAttendance';
 
 const formatSchedule = (schedules: any[]) => {
   if (!schedules || schedules.length === 0) return 'Sem horário';
@@ -31,6 +32,33 @@ export default function ProfessorHomeScreen() {
 
   const { data: disciplines = [] } = useProfessorDisciplines();
   const { mutateAsync: createCourse } = useCreateCourse();
+  const { isAdvertising, startAttendance, stopAttendance } =
+    useStartAttendance();
+  const [currentCourseId, setCurrentCourseId] = useState<string>('');
+
+  // Polling a cada 3s enquanto modal de chamada está aberto
+  useEffect(() => {
+    if (!modalVisible || !currentClassId || !currentCourseId) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const classDetails = await apiFetch<any>(`/classes/${currentClassId}`);
+        const currentAttendance = classDetails.attendances || [];
+        const courseStudents = await apiFetch<any[]>(
+          `/courses/${currentCourseId}/students`,
+        );
+        const studentList = courseStudents.map((s: any) => ({
+          ...s,
+          present: currentAttendance.some((a: any) => a.studentId === s.id),
+        }));
+        setStudents(studentList);
+      } catch (error) {
+        console.warn('Polling attendance failed:', error);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [modalVisible, currentClassId, currentCourseId]);
 
   const handleStartCall = async (
     disciplineId: string,
@@ -53,6 +81,7 @@ export default function ProfessorHomeScreen() {
         text: confirmText,
         onPress: async () => {
           setSelectedDiscipline(disciplineName);
+          setCurrentCourseId(disciplineId);
 
           try {
             // Fetch fresh list of students for the course to ensure we have everyone
@@ -93,6 +122,8 @@ export default function ProfessorHomeScreen() {
 
             if (classId) {
               setCurrentClassId(classId);
+              const btOk = await startAttendance(classId);
+              if (!btOk) return;
 
               // Merge students with attendance
               const studentList = courseStudents.map((s: any) => ({
@@ -115,12 +146,9 @@ export default function ProfessorHomeScreen() {
   };
 
   const handleSetPresence = async (studentId: string, present: boolean) => {
-    // Optimistic update
-    setStudents(prevStudents =>
-      prevStudents.map(student =>
-        student.id === studentId ? { ...student, present } : student,
-      ),
-    );
+    // Se o aluno já está no status desejado, não faz nada
+    const student = students.find(s => s.id === studentId);
+    if (student && student.present === present) return;
 
     try {
       if (present) {
@@ -133,16 +161,12 @@ export default function ProfessorHomeScreen() {
           method: 'DELETE',
         });
       }
+
+      setStudents(prevStudents =>
+        prevStudents.map(s => (s.id === studentId ? { ...s, present } : s)),
+      );
     } catch (error) {
       console.error('Failed to update attendance', error);
-      // Rollback
-      setStudents(prevStudents =>
-        prevStudents.map(student =>
-          student.id === studentId
-            ? { ...student, present: !present }
-            : student,
-        ),
-      );
       Alert.alert('Erro', 'Não foi possível registrar a presença.');
     }
   };
@@ -209,10 +233,13 @@ export default function ProfessorHomeScreen() {
       />
 
       <AttendanceModal
-        visible={modalVisible}
+        visible={isAdvertising}
         disciplineName={selectedDiscipline}
         students={students}
-        onClose={() => setModalVisible(false)}
+        onClose={() => {
+          setModalVisible(false);
+          stopAttendance();
+        }}
         onSetPresence={handleSetPresence}
       />
 

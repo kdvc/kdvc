@@ -19,6 +19,7 @@ import { AttendanceModal } from '../../components/AttendanceModal';
 import { useAddStudents } from '../../hooks/useAddStudents';
 import { ExportService } from '../../services/exportService';
 import { apiFetch } from '../../services/api';
+import { useStartAttendance } from '../../domain/bluetooth/useStartAttendance';
 
 type TabType = 'students' | 'attendance';
 
@@ -40,6 +41,7 @@ export default function ClassDetailsScreen() {
   const [studentsForAttendance, setStudentsForAttendance] = useState<any[]>([]);
 
   const { mutate: addStudents, isPending: isAddingStudents } = useAddStudents();
+  const { startAttendance, stopAttendance } = useStartAttendance();
 
   const handleAddStudents = (emails: string[]) => {
     addStudents(
@@ -89,6 +91,10 @@ export default function ClassDetailsScreen() {
 
       setStudentsForAttendance(studentList);
       setCurrentClassId(classId);
+
+      const btOk = await startAttendance(classId);
+      if (!btOk) return;
+
       setAttendanceModalVisible(true);
     } catch (error) {
       console.error('Failed to load class attendance', error);
@@ -131,6 +137,7 @@ export default function ClassDetailsScreen() {
 
   const handleCloseAttendanceModal = () => {
     setAttendanceModalVisible(false);
+    stopAttendance();
     refetchHistory(); // Refresh the list to show updated counts
   };
 
