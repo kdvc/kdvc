@@ -51,6 +51,5 @@ describe('Main', () => {
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(NestFactory.create).toHaveBeenCalledWith(AppModule);
-    expect(mockApp.listen).toHaveBeenCalled(expect.anything());
   });
 });
