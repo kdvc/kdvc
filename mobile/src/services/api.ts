@@ -24,7 +24,12 @@ export async function apiFetch<T = unknown>(
     }
   }
 
-  console.log('Making request to ' + `${BASE_URL}${path}`);
+  console.log(
+    'Making request to ' +
+      (options.method ?? 'GET') +
+      ' ' +
+      `${BASE_URL}${path}`,
+  );
 
   const res = await fetch(`${BASE_URL}${path}`, {
     ...rest,

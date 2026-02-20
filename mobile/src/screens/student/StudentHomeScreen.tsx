@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { StyleSheet, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -9,11 +9,108 @@ import { useNavigation } from '@react-navigation/native';
 import { useStudentClasses } from '../../hooks/useStudentClasses';
 import { apiFetch } from '../../services/api';
 import { getCurrentUser, updateCurrentUser } from '../../services/authStore';
+import { usePermissions } from '../../shared/hooks/usePermissions';
+import { useScanner } from '../../domain/bluetooth/useScanner';
+import { INDENTIFIER } from '../../domain/bluetooth/types';
+import { stringify as uuidStringify } from 'uuid';
 
 export default function StudentHomeScreen() {
   const navigation = useNavigation<any>();
   const { data: classes = [] } = useStudentClasses();
   const [registeredIds, setRegisteredIds] = useState<Set<string>>(new Set());
+
+  // BLE scan
+  const { allowed } = usePermissions();
+  const { devices, startScan } = useScanner({ allowed });
+  const [courseClassMap, setCourseClassMap] = useState<Record<string, string>>(
+    {},
+  );
+  const lastSeenRef = useRef<Record<string, number>>({}); // classId -> timestamp
+  const courseMapRef = useRef<Record<string, string>>({}); // classId -> courseId (cache de resolução)
+
+  // Iniciar scan automaticamente quando permitido
+  useEffect(() => {
+    if (allowed) {
+      startScan();
+    }
+  }, [allowed, startScan]);
+
+  // Extrair classIds dos devices encontrados, resolver courseId e atualizar TTL
+  useEffect(() => {
+    for (const device of devices) {
+      if (
+        device.manufacturerData &&
+        device.manufacturerData.length === 17 &&
+        device.manufacturerId === INDENTIFIER
+      ) {
+        try {
+          const classId = uuidStringify(
+            new Uint8Array(device.manufacturerData.slice(1)),
+          );
+
+          console.log(
+            '[BLE Scan] Device encontrado | classId:',
+            classId,
+            '| address:',
+            device.address,
+          );
+
+          // Atualizar timestamp de última vez que vimos esse classId
+          lastSeenRef.current[classId] = Date.now();
+
+          // Se já resolvemos o courseId, atualizar o map direto
+          if (courseMapRef.current[classId]) {
+            const courseId = courseMapRef.current[classId];
+            setCourseClassMap(prev => ({
+              ...prev,
+              [courseId]: classId,
+            }));
+          } else {
+            // Resolver courseId pela primeira vez
+            apiFetch<any>(`/classes/${classId}`)
+              .then(classDetails => {
+                if (classDetails.courseId) {
+                  courseMapRef.current[classId] = classDetails.courseId;
+                  setCourseClassMap(prev => ({
+                    ...prev,
+                    [classDetails.courseId]: classId,
+                  }));
+                }
+              })
+              .catch(err =>
+                console.warn('Failed to resolve classId:', classId, err),
+              );
+          }
+        } catch (e) {
+          console.warn('Error parsing UUID from BLE device', e);
+        }
+      }
+    }
+  }, [devices]);
+
+  // Cleanup: remover entradas que não foram vistas nos últimos 3s
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const TTL = 1000;
+      let changed = false;
+
+      const newMap = { ...courseClassMap };
+      for (const [courseId, classId] of Object.entries(newMap)) {
+        const lastSeen = lastSeenRef.current[classId] || 0;
+        if (now - lastSeen > TTL) {
+          delete newMap[courseId];
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        setCourseClassMap(newMap);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [courseClassMap]);
 
   const [user, setUser] = useState<any>(null);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
@@ -75,23 +172,41 @@ export default function StudentHomeScreen() {
         data={classes}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.listContainer}
-        renderItem={({ item }) => (
-          <ClassCard
-            title={item.name}
-            description={item.description}
-            isAttendanceActive={item.isAttendanceActive}
-            isRegistered={registeredIds.has(item.id)}
-            onPress={() =>
-              navigation.navigate('StudentClassDetails', {
-                classId: item.id,
-              })
-            }
-            onRegisterPresence={() => {
-              console.log(`Registrando presença na turma: ${item.name}`);
-              setRegisteredIds(prev => new Set(prev).add(item.id));
-            }}
-          />
-        )}
+        renderItem={({ item }) => {
+          const activeClassId = courseClassMap[item.id];
+          return (
+            <ClassCard
+              title={item.name}
+              description={item.description}
+              isAttendanceActive={!!activeClassId}
+              isRegistered={registeredIds.has(item.id)}
+              onPress={() =>
+                navigation.navigate('StudentClassDetails', {
+                  classId: item.id,
+                })
+              }
+              onRegisterPresence={async () => {
+                if (!activeClassId) return;
+                try {
+                  console.log(
+                    '[Chamada] Registrando presença | classId:',
+                    activeClassId,
+                  );
+                  await apiFetch(`/classes/${activeClassId}/attendance`, {
+                    method: 'POST',
+                  });
+                  console.log('[Chamada] ✅ Presença registrada!');
+                  setRegisteredIds(prev => new Set(prev).add(item.id));
+                } catch (error) {
+                  console.error(
+                    '[Chamada] ❌ Erro ao registrar presença:',
+                    error,
+                  );
+                }
+              }}
+            />
+          );
+        }}
       />
 
       <ProfileModal

@@ -59,4 +59,31 @@ class BleBroadcasterModule(private val reactContext: ReactApplicationContext)
         callback = null
         promise.resolve(null)
     }
-} 
+
+    @ReactMethod
+    fun isBluetoothEnabled(promise: Promise) {
+        val adapter = BluetoothAdapter.getDefaultAdapter()
+        promise.resolve(adapter?.isEnabled == true)
+    }
+
+    @ReactMethod
+    fun requestEnableBluetooth(promise: Promise) {
+        val adapter = BluetoothAdapter.getDefaultAdapter()
+        if (adapter == null) {
+            promise.reject("NO_ADAPTER", "Bluetooth not supported")
+            return
+        }
+        if (adapter.isEnabled) {
+            promise.resolve(true)
+            return
+        }
+        try {
+            val intent = android.content.Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            reactContext.startActivity(intent)
+            promise.resolve(false)
+        } catch (e: Exception) {
+            promise.reject("ENABLE_FAILED", e.message)
+        }
+    }
+}
