@@ -12,21 +12,19 @@ export class LoggingMiddleware implements NestMiddleware {
     this.logger.log(
       `INCOMING REQUEST ${method} ${originalUrl}\n` +
         `  Query: ${JSON.stringify(query)}\n` +
-        originalUrl.includes('auth/login')
-        ? ''
-        : `  Body: ${JSON.stringify(body)}`,
+        (originalUrl.includes('auth/login')
+          ? ''
+          : `  Body: ${JSON.stringify(body)}`),
     );
 
     const originalJson = res.json.bind(res);
 
     res.json = (resBody: any) => {
       const duration = Date.now() - start;
-      if (originalUrl.includes('auth/login')) {
-        this.logger.log(
-          `OUTGOING RESPONSE ${method} ${originalUrl} ${res.statusCode} (${duration}ms)\n` +
-            `  Body: ${JSON.stringify(Object.fromEntries(Object.entries(resBody).filter(([key]) => key !== 'password')))}`,
-        );
-      }
+      this.logger.log(
+        `OUTGOING RESPONSE ${method} ${originalUrl} ${res.statusCode} (${duration}ms)`,
+      );
+
       return originalJson(resBody);
     };
 
