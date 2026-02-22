@@ -18,7 +18,7 @@ export class LoggingMiddleware implements NestMiddleware {
 
     const originalJson = res.json.bind(res);
 
-    res.json = (resBody: any) => {
+    res.json = (resBody: Record<string, unknown>) => {
       const duration = Date.now() - start;
       this.logger.log(
         `OUTGOING RESPONSE ${method} ${originalUrl} ${res.statusCode} (${duration}ms)\n` +
