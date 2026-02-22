@@ -12,9 +12,18 @@ export class ClassesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
-  ) {}
+  ) { }
 
   async create(data: CreateClassDto) {
+    // Verify course exists
+    const course = await this.prisma.course.findUnique({
+      where: { id: data.courseId },
+    });
+
+    if (!course) {
+      throw new NotFoundException(`Course with ID ${data.courseId} not found`);
+    }
+
     return this.prisma.class.create({
       data,
       include: {

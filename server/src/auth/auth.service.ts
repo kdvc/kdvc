@@ -14,7 +14,7 @@ const LOCAL_ISSUER = 'kdvc';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   async validateGoogleUser(details: { email: string; name: string }) {
     const user = await this.usersService.findByEmail(details.email);
@@ -144,12 +144,7 @@ export class AuthService {
       throw new ConflictException('Email already registered');
     }
 
-    const hashedPassword = await bcrypt.hash(data.password, 10);
-
-    const user = await this.usersService.create({
-      ...data,
-      password: hashedPassword,
-    });
+    const user = await this.usersService.create(data);
 
     const token = this.signLocalToken(user);
     return { user: { ...user, password: undefined }, access_token: token };

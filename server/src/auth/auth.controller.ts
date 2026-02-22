@@ -17,7 +17,7 @@ import { GoogleLoginDto, LoginDto, RefreshTokenDto } from '../dto/auth.dto';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @Post('login')
   @ApiOperation({ summary: 'Login with email and password' })
@@ -69,7 +69,12 @@ export class AuthController {
   @Authenticated()
   @ApiOperation({ summary: 'Get current user profile' })
   getProfile(@Req() req: Request) {
-    return req.user;
+    const user = req.user as any;
+    if (user) {
+      const { password, ...rest } = user;
+      return rest;
+    }
+    return user;
   }
 
   @Post('google/login')
