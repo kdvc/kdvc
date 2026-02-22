@@ -32,7 +32,7 @@ export class CoursesController {
   constructor(
     private readonly coursesService: CoursesService,
     private readonly classesService: ClassesService,
-  ) {}
+  ) { }
 
   @Post()
   @Authenticated(Role.TEACHER)
@@ -83,6 +83,7 @@ export class CoursesController {
   findAll(@Req() { user }: Request) {
     return this.coursesService.findAll(
       user.role === Role.STUDENT ? user.id : undefined,
+      user.role === Role.TEACHER ? user.id : undefined,
     );
   }
 
@@ -127,8 +128,8 @@ export class CoursesController {
   })
   @ApiResponse({ status: 200, description: 'Course updated successfully' })
   @ApiResponse({ status: 404, description: 'Course not found' })
-  update(@Param('id') id: string, @Body() updateCourseDto: UpdateCourseDto) {
-    return this.coursesService.update(id, updateCourseDto);
+  update(@Param('id') id: string, @Body() updateCourseDto: UpdateCourseDto, @Req() { user }: Request) {
+    return this.coursesService.update(id, updateCourseDto, user.id);
   }
 
   @Delete(':id')
@@ -141,8 +142,8 @@ export class CoursesController {
   })
   @ApiResponse({ status: 200, description: 'Course deleted successfully' })
   @ApiResponse({ status: 404, description: 'Course not found' })
-  remove(@Param('id') id: string) {
-    return this.coursesService.remove(id);
+  remove(@Param('id') id: string, @Req() { user }: Request) {
+    return this.coursesService.remove(id, user.id);
   }
 
   @Post(':id/students')
@@ -175,8 +176,8 @@ export class CoursesController {
     description: 'Student already enrolled or user is not a student',
   })
   @ApiResponse({ status: 404, description: 'Course or student not found' })
-  addStudent(@Param('id') id: string, @Body() addStudentDto: AddStudentDto) {
-    return this.coursesService.addStudent(id, addStudentDto);
+  addStudent(@Param('id') id: string, @Body() addStudentDto: AddStudentDto, @Req() { user }: Request) {
+    return this.coursesService.addStudent(id, addStudentDto, user.id);
   }
 
   @Get(':id/students')
@@ -233,8 +234,9 @@ export class CoursesController {
   addStudentsByEmail(
     @Param('id') id: string,
     @Body() body: { emails: string[] },
+    @Req() { user }: Request,
   ) {
-    return this.coursesService.addStudentsByEmail(id, body.emails);
+    return this.coursesService.addStudentsByEmail(id, body.emails, user.id);
   }
 
   @Delete(':id/students/:studentId')
@@ -258,8 +260,9 @@ export class CoursesController {
   removeStudent(
     @Param('id') id: string,
     @Param('studentId') studentId: string,
+    @Req() { user }: Request,
   ) {
-    return this.coursesService.removeStudent(id, studentId);
+    return this.coursesService.removeStudent(id, studentId, user.id);
   }
 
   @Get(':id/classes')
