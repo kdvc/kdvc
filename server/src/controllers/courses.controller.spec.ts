@@ -74,13 +74,13 @@ describe('CoursesController', () => {
     it('should call service.findAll with user id if student', async () => {
       const req = { user: { id: 'u1', role: Role.STUDENT } };
       await controller.findAll(req as unknown as Request);
-      expect(coursesService.findAll).toHaveBeenCalledWith('u1');
+      expect(coursesService.findAll).toHaveBeenCalledWith('u1', undefined);
     });
 
     it('should call service.findAll with undefined if teacher', async () => {
       const req = { user: { id: 'u1', role: Role.TEACHER } };
       await controller.findAll(req as unknown as Request);
-      expect(coursesService.findAll).toHaveBeenCalledWith(undefined);
+      expect(coursesService.findAll).toHaveBeenCalledWith(undefined, 'u1');
     });
 
     it('should propagate service errors', async () => {
