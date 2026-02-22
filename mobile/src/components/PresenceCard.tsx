@@ -3,19 +3,31 @@ import { View, Text, StyleSheet } from 'react-native';
 
 interface Props {
   date: string;
+  topic?: string;
   present: boolean;
 }
 
-export default function PresenceCard({ date, present }: Props) {
+export default function PresenceCard({ date, topic, present }: Props) {
+  const truncate = (str: string | undefined, max: number) => {
+    if (!str) return '';
+    return str.length > max ? str.substring(0, max) + '...' : str;
+  };
+
+  const displayTopic = truncate(topic || 'Chamada', 25);
+
   return (
     <View style={styles.card}>
-      <Text style={styles.date}>Dia {date}</Text>
+      <View style={styles.leftContainer}>
+        <Text style={styles.date} numberOfLines={1} ellipsizeMode="tail">{displayTopic}</Text>
+        <Text style={styles.topic}>{date}</Text>
+      </View>
       <Text style={[styles.status, present ? styles.present : styles.absent]}>
         {present ? 'Presente' : 'Ausente'}
       </Text>
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   card: {
@@ -34,10 +46,19 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
+  leftContainer: {
+    flex: 1,
+    marginRight: 12,
+  },
   date: {
     fontSize: 16,
     color: '#1D1B20',
     fontWeight: '500',
+  },
+  topic: {
+    fontSize: 12,
+    color: '#757575',
+    marginTop: 2,
   },
   status: {
     fontSize: 14,

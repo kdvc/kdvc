@@ -246,7 +246,7 @@ export const AddClassModal: React.FC<AddClassModalProps> = ({
             {/* Actions */}
             <View style={styles.buttonContainer}>
               <TouchableOpacity
-                style={[styles.button, styles.cancelButton]}
+                style={[styles.modalButton, styles.cancelButton]}
                 onPress={handleClose}
               >
                 <Text style={[styles.buttonText, styles.cancelButtonText]}>
@@ -254,7 +254,7 @@ export const AddClassModal: React.FC<AddClassModalProps> = ({
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.button, styles.saveButton]}
+                style={[styles.modalButton, styles.saveButton]}
                 onPress={handleSave}
               >
                 <Text style={[styles.buttonText, styles.saveButtonText]}>
@@ -390,16 +390,15 @@ const styles = StyleSheet.create({
   /* ---- Buttons ---- */
   buttonContainer: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 24,
-    gap: 12,
+    justifyContent: 'space-between',
+    paddingTop: 16,
   },
-  button: {
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    borderRadius: 100,
-    minWidth: 100,
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
     alignItems: 'center',
+    marginHorizontal: 8,
   },
   cancelButton: {
     backgroundColor: 'transparent',

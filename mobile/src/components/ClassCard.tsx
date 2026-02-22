@@ -4,7 +4,9 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
+  Image,
 } from 'react-native';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 const colors = {
   primary: '#4F378B',
@@ -25,7 +27,9 @@ const colors = {
 type ClassCardProps = {
   title: string;
   description: string;
+  picture?: string;
   isAttendanceActive?: boolean;
+  activeTopic?: string;
   isRegistered?: boolean;
   onPress?: () => void;
   onRegisterPresence?: () => void;
@@ -34,7 +38,9 @@ type ClassCardProps = {
 export function ClassCard({
   title,
   description,
+  picture,
   isAttendanceActive = false,
+  activeTopic,
   isRegistered = false,
   onPress,
   onRegisterPresence,
@@ -47,6 +53,15 @@ export function ClassCard({
     .join('')
     .toUpperCase();
 
+  const truncate = (str: string | undefined, max: number) => {
+    if (!str) return '';
+    return str.length > max ? str.substring(0, max) + '...' : str;
+  };
+
+  const displayTitle = truncate(title, 30);
+  const displayDesc = truncate(description, 35);
+  const displayTopic = activeTopic ? truncate(activeTopic, 15) : undefined;
+
   return (
     <TouchableOpacity
       style={styles.container}
@@ -55,20 +70,26 @@ export function ClassCard({
     >
       <View style={styles.left}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{avatarLabel}</Text>
+          {picture ? (
+            <Image source={{ uri: picture }} style={styles.avatarImage} />
+          ) : (
+            <Text style={styles.avatarText}>{avatarLabel}</Text>
+          )}
         </View>
 
         <View style={styles.textContainer}>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.subtitle}>{description}</Text>
+          <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">{displayTitle}</Text>
+          <Text style={styles.subtitle} numberOfLines={1} ellipsizeMode="tail">{displayDesc}</Text>
         </View>
       </View>
 
       {/* Right side */}
-      {isAttendanceActive && (
+      {isAttendanceActive ? (
         <View style={styles.rightContainer}>
           <View style={styles.activeBadge}>
-            <Text style={styles.activeLabel}>Chamada Ativa</Text>
+            <Text style={styles.activeLabel} numberOfLines={1} ellipsizeMode="tail">
+              {displayTopic ? `Chamada: ${displayTopic}` : 'Chamada Ativa'}
+            </Text>
           </View>
 
           <TouchableOpacity
@@ -87,6 +108,10 @@ export function ClassCard({
             </Text>
           </TouchableOpacity>
         </View>
+      ) : (
+        <View style={styles.rightContainerFallback}>
+          <MaterialIcons name="chevron-right" size={24} color="#79747E" />
+        </View>
       )}
     </TouchableOpacity>
   );
@@ -100,7 +125,7 @@ const styles = StyleSheet.create({
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#F0F0F0',
 
@@ -115,7 +140,6 @@ const styles = StyleSheet.create({
   left: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
     flex: 1,
   },
 
@@ -123,9 +147,17 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#F3E5F5', // Lighter purple
+    backgroundColor: '#F3E5F5',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+    marginRight: 16,
+  },
+
+  avatarImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
   },
 
   avatarText: {
@@ -136,7 +168,6 @@ const styles = StyleSheet.create({
 
   textContainer: {
     flex: 1,
-    gap: 2,
   },
 
   title: {
@@ -144,6 +175,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1D1B20',
     letterSpacing: 0.1,
+    marginBottom: 2,
   },
 
   subtitle: {
@@ -153,11 +185,16 @@ const styles = StyleSheet.create({
 
   rightContainer: {
     alignItems: 'center',
-    gap: 8,
+    marginLeft: 12,
+    flexShrink: 1, // ensure the right side can shrink if text is huge
+  },
+
+  rightContainerFallback: {
+    justifyContent: 'center',
+    alignItems: 'flex-end',
     marginLeft: 12,
   },
 
-  // Active Badge - Pill shape, subtle
   activeBadge: {
     backgroundColor: '#E8F5E9',
     paddingHorizontal: 8,
@@ -165,6 +202,8 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1,
     borderColor: '#C8E6C9',
+    flexShrink: 1, // Let badge shrink if text is long
+    marginBottom: 8,
   },
 
   activeLabel: {

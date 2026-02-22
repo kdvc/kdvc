@@ -18,7 +18,7 @@ export class CoursesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
-  ) {}
+  ) { }
 
   async create(courseData: CreateCourseDto, teacherId: string) {
     await this.usersService.findTeacher(teacherId);
@@ -31,12 +31,12 @@ export class CoursesService {
         teacherId,
         schedules: schedules
           ? {
-              create: schedules.map((s) => ({
-                dayOfWeek: s.dayOfWeek,
-                startTime: s.startTime,
-                endTime: s.endTime,
-              })),
-            }
+            create: schedules.map((s) => ({
+              dayOfWeek: s.dayOfWeek,
+              startTime: s.startTime,
+              endTime: s.endTime,
+            })),
+          }
           : undefined,
       },
       include: {
@@ -47,14 +47,20 @@ export class CoursesService {
     });
 
     if (emails && emails.length > 0) {
-      await this.addStudentsByEmail(course.id, emails);
+      await this.addStudentsByEmail(course.id, emails, teacherId);
     }
 
     return course;
   }
 
-  async findAll(studentId?: string) {
-    const where = studentId ? { students: { some: { studentId } } } : {}; // sem filtro se undefined
+  async findAll(studentId?: string, teacherId?: string) {
+    const where: any = {};
+    if (studentId) {
+      where.students = { some: { studentId } };
+    }
+    if (teacherId) {
+      where.teacherId = teacherId;
+    }
 
     const courses = await this.prisma.course.findMany({
       where,
@@ -86,12 +92,26 @@ export class CoursesService {
                 lt: tomorrow,
               },
             },
+            orderBy: {
+              date: 'desc',
+            },
+            select: { id: true },
+          });
+
+          const lastClass = await this.prisma.class.findFirst({
+            where: {
+              courseId: course.id,
+            },
+            orderBy: {
+              date: 'desc',
+            },
             select: { id: true },
           });
 
           return {
             ...course,
             activeClassId: activeClass?.id || null,
+            lastClassId: lastClass?.id || null,
           };
         }),
       );
@@ -135,7 +155,7 @@ export class CoursesService {
     }
 
     if (user.role === 'STUDENT') {
-      const isEnrolled = course.students.some((s) => s.studentId === user.id);
+      const isEnrolled = (course as any).students.some((s: any) => s.studentId === user.id);
       if (!isEnrolled) {
         throw new ForbiddenException('You are not enrolled in this course');
       }
@@ -162,8 +182,12 @@ export class CoursesService {
     throw new ForbiddenException();
   }
 
-  async update(id: string, data: UpdateCourseDto) {
-    await this.findById(id); // Check if exists
+  async update(id: string, data: UpdateCourseDto, teacherId: string) {
+    const course = await this.findById(id);
+
+    if (course.teacherId !== teacherId) {
+      throw new ForbiddenException('You can only update your own courses');
+    }
 
     return this.prisma.course.update({
       where: { id },
@@ -175,17 +199,25 @@ export class CoursesService {
     });
   }
 
-  async remove(id: string) {
-    await this.findById(id); // Check if exists
+  async remove(id: string, teacherId: string) {
+    const course = await this.findById(id);
+
+    if (course.teacherId !== teacherId) {
+      throw new ForbiddenException('You can only delete your own courses');
+    }
 
     return this.prisma.course.delete({
       where: { id },
     });
   }
 
-  async addStudent(courseId: string, data: AddStudentDto) {
+  async addStudent(courseId: string, data: AddStudentDto, teacherId: string) {
     // Verify course exists
-    await this.findById(courseId);
+    const course = await this.findById(courseId);
+
+    if (course.teacherId !== teacherId) {
+      throw new ForbiddenException('You can only add students to your own courses');
+    }
 
     // Verify student exists and has STUDENT role
     await this.usersService.findStudent(data.studentId);
@@ -218,9 +250,13 @@ export class CoursesService {
     });
   }
 
-  async removeStudent(courseId: string, studentId: string) {
+  async removeStudent(courseId: string, studentId: string, teacherId: string) {
     // Verify course exists
-    await this.findById(courseId);
+    const course = await this.findById(courseId);
+
+    if (course.teacherId !== teacherId) {
+      throw new ForbiddenException('You can only remove students from your own courses');
+    }
 
     const enrollment = await this.prisma.studentCourse.findUnique({
       where: {
@@ -245,9 +281,13 @@ export class CoursesService {
     });
   }
 
-  async addStudentsByEmail(courseId: string, emails: string[]) {
+  async addStudentsByEmail(courseId: string, emails: string[], teacherId: string) {
     // Verify course exists
-    await this.findById(courseId);
+    const course = await this.findById(courseId);
+
+    if (course.teacherId !== teacherId) {
+      throw new ForbiddenException('You can only add students to your own courses');
+    }
 
     // Validate emails and prepare user data
     const validEmails = new Set<string>();

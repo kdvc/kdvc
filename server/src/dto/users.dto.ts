@@ -39,4 +39,12 @@ export class UpdateUserDto {
   @IsString()
   @IsOptional()
   enrollmentId?: string;
+
+  @IsString()
+  @IsOptional()
+  profilePicture?: string;
+
+  @IsString()
+  @IsOptional()
+  displayName?: string;
 }

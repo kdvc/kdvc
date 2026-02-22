@@ -140,7 +140,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
               >
                 <View style={styles.badgesContainer}>
                   {emails.map((email, index) => (
-                    <View key={index} style={styles.badge}>
+                    <View key={email} style={styles.emailItem}>
                       <Text style={styles.badgeText}>{email}</Text>
                       <TouchableOpacity onPress={() => removeEmail(email)}>
                         <MaterialIcons
@@ -155,10 +155,10 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
               </ScrollView>
             </View>
 
-            <View style={styles.footer}>
+            <View style={styles.buttonContainer}>
               <TouchableOpacity
-                style={[styles.button, styles.cancelButton]}
-                onPress={handleClose}
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={onClose}
                 disabled={isLoading}
               >
                 <Text style={[styles.buttonText, styles.cancelButtonText]}>
@@ -167,7 +167,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
-                  styles.button,
+                  styles.modalButton,
                   styles.saveButton,
                   emails.length === 0 && styles.disabledButton,
                 ]}
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: colors.outline,
     borderRadius: 8,
@@ -255,32 +255,32 @@ const styles = StyleSheet.create({
   badgesContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
   },
-  badge: {
+  emailItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primaryLight,
+    backgroundColor: '#F5F5F3',
+    paddingVertical: 4,
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    gap: 6,
+    borderRadius: 100,
+    marginBottom: 6,
+    marginRight: 8, // Added to replace gap
   },
   badgeText: {
     color: colors.primary,
     fontSize: 14,
     fontWeight: '500',
   },
-  footer: {
+  buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    marginTop: 24,
-    gap: 12,
+    marginTop: 12,
   },
-  button: {
+  modalButton: {
     paddingVertical: 10,
-    paddingHorizontal: 24,
-    borderRadius: 100,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginLeft: 12,
     minWidth: 100,
     alignItems: 'center',
   },

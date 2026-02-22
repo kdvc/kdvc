@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 
 const colors = {
   primary: '#4F378B',
@@ -19,20 +19,24 @@ interface DisciplineCardProps {
   name: string;
   schedule?: string;
   studentCount?: number;
-  onStartCall: () => void;
+  picture?: string;
+  onStartCall: (lastClassId: string | null) => void;
   onPress?: () => void;
   isActive?: boolean;
   hasActiveCall?: boolean;
+  lastClassId?: string | null;
 }
 
 export function DisciplineCard({
   name,
   schedule,
   studentCount,
+  picture,
   onStartCall,
   onPress,
-  isActive = true, // Default to true if not provided (backward compatibility)
+  isActive = true,
   hasActiveCall = false,
+  lastClassId = null,
 }: DisciplineCardProps) {
   const avatarLabel = name
     .split(' ')
@@ -40,6 +44,14 @@ export function DisciplineCard({
     .slice(0, 2)
     .join('')
     .toUpperCase();
+
+  const truncate = (str: string | undefined, max: number) => {
+    if (!str) return '';
+    return str.length > max ? str.substring(0, max) + '...' : str;
+  };
+
+  const displayName = truncate(name, 30);
+  const displaySchedule = truncate(schedule, 25);
 
   return (
     <TouchableOpacity
@@ -49,12 +61,16 @@ export function DisciplineCard({
     >
       <View style={styles.topSection}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{avatarLabel}</Text>
+          {picture ? (
+            <Image source={{ uri: picture }} style={styles.avatarImage} />
+          ) : (
+            <Text style={styles.avatarText}>{avatarLabel}</Text>
+          )}
         </View>
 
         <View style={styles.textContainer}>
-          <Text style={styles.title}>{name}</Text>
-          {schedule && <Text style={styles.subtitle}>{schedule}</Text>}
+          <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">{displayName}</Text>
+          {schedule && <Text style={styles.subtitle} numberOfLines={1} ellipsizeMode="tail">{displaySchedule}</Text>}
           {studentCount !== undefined && (
             <Text style={styles.caption}>{studentCount} alunos</Text>
           )}
@@ -67,7 +83,7 @@ export function DisciplineCard({
           !isActive && styles.callButtonDisabled,
           hasActiveCall && styles.reopenButton,
         ]}
-        onPress={onStartCall}
+        onPress={() => onStartCall(lastClassId)}
         disabled={!isActive}
       >
         <Text
@@ -77,10 +93,8 @@ export function DisciplineCard({
             hasActiveCall && styles.reopenButtonText,
           ]}
         >
-          {hasActiveCall
-            ? 'Reabrir Chamada'
-            : isActive
-            ? 'Iniciar Chamada'
+          {isActive
+            ? 'Gerenciar Chamada'
             : 'Fora de Horário'}
         </Text>
       </TouchableOpacity>
@@ -96,7 +110,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     flexDirection: 'column',
-    marginBottom: 12,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#F0F0F0',
 
@@ -111,7 +125,7 @@ const styles = StyleSheet.create({
   // ... verify other styles exist or use view_file first?
   // I have the file content in history.
   reopenButton: {
-    backgroundColor: '#FF9800', // Orange for reopen
+    backgroundColor: '#4F378B', // Purple to match theme
   },
   reopenButtonText: {
     color: '#FFF',
@@ -121,16 +135,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 16,
-    gap: 16,
   },
 
   avatar: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#F3E5F5', // Lighter purple
+    backgroundColor: '#F3E5F5',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+    marginRight: 16,
+  },
+
+  avatarImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
   },
 
   avatarText: {
@@ -141,7 +162,6 @@ const styles = StyleSheet.create({
 
   textContainer: {
     flex: 1,
-    gap: 2,
   },
 
   title: {
@@ -149,6 +169,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1D1B20',
     letterSpacing: 0.1,
+    marginBottom: 2,
   },
 
   subtitle: {

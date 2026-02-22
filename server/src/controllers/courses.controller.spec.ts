@@ -74,13 +74,13 @@ describe('CoursesController', () => {
     it('should call service.findAll with user id if student', async () => {
       const req = { user: { id: 'u1', role: Role.STUDENT } };
       await controller.findAll(req as unknown as Request);
-      expect(coursesService.findAll).toHaveBeenCalledWith('u1');
+      expect(coursesService.findAll).toHaveBeenCalledWith('u1', undefined);
     });
 
     it('should call service.findAll with undefined if teacher', async () => {
       const req = { user: { id: 'u1', role: Role.TEACHER } };
       await controller.findAll(req as unknown as Request);
-      expect(coursesService.findAll).toHaveBeenCalledWith(undefined);
+      expect(coursesService.findAll).toHaveBeenCalledWith(undefined, 'u1');
     });
 
     it('should propagate service errors', async () => {
@@ -111,14 +111,16 @@ describe('CoursesController', () => {
   describe('update', () => {
     it('should call service.update', async () => {
       const dto = { name: 'Updated' };
-      await controller.update('c1', dto);
-      expect(coursesService.update).toHaveBeenCalledWith('c1', dto);
+      const req = { user: { id: 't1' } };
+      await controller.update('c1', dto, req as any);
+      expect(coursesService.update).toHaveBeenCalledWith('c1', dto, 't1');
     });
 
     it('should propagate service errors', async () => {
       const dto = { name: 'Updated' };
+      const req = { user: { id: 't1' } };
       coursesService.update.mockRejectedValue(new Error('Service Error'));
-      await expect(controller.update('c1', dto)).rejects.toThrow(
+      await expect(controller.update('c1', dto, req as any)).rejects.toThrow(
         'Service Error',
       );
     });
@@ -126,27 +128,31 @@ describe('CoursesController', () => {
 
   describe('remove', () => {
     it('should call service.remove', async () => {
-      await controller.remove('c1');
-      expect(coursesService.remove).toHaveBeenCalledWith('c1');
+      const req = { user: { id: 't1' } };
+      await controller.remove('c1', req as any);
+      expect(coursesService.remove).toHaveBeenCalledWith('c1', 't1');
     });
 
     it('should propagate service errors', async () => {
+      const req = { user: { id: 't1' } };
       coursesService.remove.mockRejectedValue(new Error('Service Error'));
-      await expect(controller.remove('c1')).rejects.toThrow('Service Error');
+      await expect(controller.remove('c1', req as any)).rejects.toThrow('Service Error');
     });
   });
 
   describe('addStudent', () => {
     it('should call service.addStudent', async () => {
       const dto = { studentId: 's1' };
-      await controller.addStudent('c1', dto);
-      expect(coursesService.addStudent).toHaveBeenCalledWith('c1', dto);
+      const req = { user: { id: 't1' } };
+      await controller.addStudent('c1', dto, req as any);
+      expect(coursesService.addStudent).toHaveBeenCalledWith('c1', dto, 't1');
     });
 
     it('should propagate service errors', async () => {
       const dto = { studentId: 's1' };
+      const req = { user: { id: 't1' } };
       coursesService.addStudent.mockRejectedValue(new Error('Service Error'));
-      await expect(controller.addStudent('c1', dto)).rejects.toThrow(
+      await expect(controller.addStudent('c1', dto, req as any)).rejects.toThrow(
         'Service Error',
       );
     });
@@ -171,19 +177,22 @@ describe('CoursesController', () => {
   describe('addStudentsByEmail', () => {
     it('should call service.addStudentsByEmail', async () => {
       const body = { emails: ['s1@test.com'] };
-      await controller.addStudentsByEmail('c1', body);
+      const req = { user: { id: 't1' } };
+      await controller.addStudentsByEmail('c1', body, req as any);
       expect(coursesService.addStudentsByEmail).toHaveBeenCalledWith(
         'c1',
         body.emails,
+        't1',
       );
     });
 
     it('should propagate service errors', async () => {
       const body = { emails: ['s1@test.com'] };
+      const req = { user: { id: 't1' } };
       coursesService.addStudentsByEmail.mockRejectedValue(
         new Error('Service Error'),
       );
-      await expect(controller.addStudentsByEmail('c1', body)).rejects.toThrow(
+      await expect(controller.addStudentsByEmail('c1', body, req as any)).rejects.toThrow(
         'Service Error',
       );
     });
@@ -191,15 +200,17 @@ describe('CoursesController', () => {
 
   describe('removeStudent', () => {
     it('should call service.removeStudent', async () => {
-      await controller.removeStudent('c1', 's1');
-      expect(coursesService.removeStudent).toHaveBeenCalledWith('c1', 's1');
+      const req = { user: { id: 't1' } };
+      await controller.removeStudent('c1', 's1', req as any);
+      expect(coursesService.removeStudent).toHaveBeenCalledWith('c1', 's1', 't1');
     });
 
     it('should propagate service errors', async () => {
+      const req = { user: { id: 't1' } };
       coursesService.removeStudent.mockRejectedValue(
         new Error('Service Error'),
       );
-      await expect(controller.removeStudent('c1', 's1')).rejects.toThrow(
+      await expect(controller.removeStudent('c1', 's1', req as any)).rejects.toThrow(
         'Service Error',
       );
     });

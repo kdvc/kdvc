@@ -36,8 +36,6 @@ app/build/
 local.properties
 *.iml
 *.hprof
-*.keystore
-!debug.keystore
 .cxx/
 captures/
 .externalNativeBuild

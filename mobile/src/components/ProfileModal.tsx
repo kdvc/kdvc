@@ -8,8 +8,10 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  Image,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { launchImageLibrary } from 'react-native-image-picker';
 import { apiFetch } from '../services/api';
 
 interface User {
@@ -18,6 +20,8 @@ interface User {
   email: string;
   role: string;
   enrollmentId?: string;
+  displayName?: string;
+  profilePicture?: string;
 }
 
 interface ProfileModalProps {
@@ -46,6 +50,8 @@ export const ProfileModal = ({
   onSaveSuccess,
 }: ProfileModalProps) => {
   const [enrollmentId, setEnrollmentId] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [profilePicture, setProfilePicture] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -53,9 +59,29 @@ export const ProfileModal = ({
   useEffect(() => {
     if (visible && user) {
       setEnrollmentId(user.enrollmentId || '');
+      setDisplayName(user.displayName || '');
+      setProfilePicture(user.profilePicture || undefined);
       setError('');
     }
   }, [visible, user]);
+
+  const handlePickImage = async () => {
+    try {
+      const result = await launchImageLibrary({
+        mediaType: 'photo',
+        quality: 0.5,
+        maxWidth: 300,
+        maxHeight: 300,
+        includeBase64: true,
+      });
+      if (result.assets && result.assets[0]?.base64) {
+        const base64Uri = `data:${result.assets[0].type || 'image/jpeg'};base64,${result.assets[0].base64}`;
+        setProfilePicture(base64Uri);
+      }
+    } catch (e) {
+      console.error('Image picker error:', e);
+    }
+  };
 
   const validateEnrollmentId = (id: string) => {
     if (!id) return 'Matrícula é obrigatória.';
@@ -68,8 +94,20 @@ export const ProfileModal = ({
     const dataToSave: any = {};
     let hasChanges = false;
 
-    // Validate if enrollmentId changed
-    if (enrollmentId !== (user?.enrollmentId || '')) {
+    // Check displayName change
+    if (displayName !== (user?.displayName || '')) {
+      dataToSave.displayName = displayName || '';
+      hasChanges = true;
+    }
+
+    // Check profilePicture change
+    if (profilePicture !== (user?.profilePicture || undefined)) {
+      dataToSave.profilePicture = profilePicture || '';
+      hasChanges = true;
+    }
+
+    // Check enrollmentId change (only if not a teacher or teacher already has one)
+    if (user?.role !== 'TEACHER' && enrollmentId !== (user?.enrollmentId || '')) {
       const validationError = validateEnrollmentId(enrollmentId);
       if (validationError) {
         setError(validationError);
@@ -141,12 +179,36 @@ export const ProfileModal = ({
             </Text>
           )}
 
+          {/* Profile Picture */}
+          <TouchableOpacity style={styles.avatarPickerContainer} onPress={handlePickImage} disabled={loading}>
+            {profilePicture ? (
+              <Image source={{ uri: profilePicture }} style={styles.avatarPreview} />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <MaterialIcons name="camera-alt" size={32} color={colors.placeholder} />
+              </View>
+            )}
+            <Text style={styles.avatarPickerText}>Alterar foto</Text>
+          </TouchableOpacity>
+
           <View style={styles.formGroup}>
             <Text style={styles.label}>Nome</Text>
             <TextInput
               style={[styles.input, styles.disabledInput]}
               value={user?.name}
               editable={false}
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Nome de exibição</Text>
+            <TextInput
+              style={styles.input}
+              value={displayName}
+              onChangeText={setDisplayName}
+              placeholder={user?.name?.split(' ')[0] || 'Seu apelido'}
+              placeholderTextColor="#999"
+              editable={!loading}
             />
           </View>
 
@@ -159,24 +221,26 @@ export const ProfileModal = ({
             />
           </View>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Matrícula (9 dígitos)*</Text>
-            <TextInput
-              style={[styles.input, error ? styles.inputError : null]}
-              value={enrollmentId}
-              onChangeText={text => {
-                // Allow only numbers
-                const numeric = text.replace(/[^0-9]/g, '');
-                setEnrollmentId(numeric);
-                if (error) setError('');
-              }}
-              placeholder="Ex: 123110530"
-              keyboardType="numeric"
-              maxLength={9}
-              editable={!loading}
-            />
-            {error ? <Text style={styles.errorText}>{error}</Text> : null}
-          </View>
+          {user?.role !== 'TEACHER' && (
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Matrícula (9 dígitos)*</Text>
+              <TextInput
+                style={[styles.input, error ? styles.inputError : null]}
+                value={enrollmentId}
+                onChangeText={text => {
+                  // Allow only numbers
+                  const numeric = text.replace(/[^0-9]/g, '');
+                  setEnrollmentId(numeric);
+                  if (error) setError('');
+                }}
+                placeholder="Ex: 123110530"
+                keyboardType="numeric"
+                maxLength={9}
+                editable={!loading}
+              />
+              {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            </View>
+          )}
 
           <TouchableOpacity
             style={[styles.saveButton, loading && styles.disabledButton]}
@@ -277,5 +341,29 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 16,
     fontWeight: '600',
+  },
+  avatarPickerContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  avatarPreview: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 8,
+  },
+  avatarPlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#F3E5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  avatarPickerText: {
+    fontSize: 13,
+    color: colors.primary,
+    fontWeight: '500',
   },
 });

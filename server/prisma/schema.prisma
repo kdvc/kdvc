@@ -19,6 +19,8 @@ model User {
   password  String
   role      Role
   enrollmentId String?
+  displayName String?
+  profilePicture String? @db.Text
 
 
   // Relations
@@ -33,6 +35,7 @@ model Course {
   id          String  @id @default(uuid())
   name        String
   description String?
+  picture     String? @db.Text
 
   teacherId   String
   teacherRole Role    @default(TEACHER)
@@ -59,7 +62,7 @@ model StudentCourse {
   student     User   @relation(fields: [studentId, studentRole], references: [id, role])
 
   courseId String
-  course   Course @relation(fields: [courseId], references: [id])
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   assignedAt DateTime @default(now())
 
@@ -72,7 +75,7 @@ model Class {
   date  DateTime
 
   courseId String
-  course   Course @relation(fields: [courseId], references: [id])
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   attendances Attendance[]
 }
@@ -81,10 +84,10 @@ model Attendance {
   id String @id @default(uuid())
 
   classId String
-  class   Class  @relation(fields: [classId], references: [id])
+  class   Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
 
   studentId String
-  student   User   @relation(fields: [studentId], references: [id])
+  student   User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 

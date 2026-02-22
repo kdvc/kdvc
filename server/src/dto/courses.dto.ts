@@ -64,6 +64,10 @@ export class UpdateCourseDto {
   @IsUUID()
   @IsOptional()
   teacherId?: string;
+
+  @IsString()
+  @IsOptional()
+  picture?: string;
 }
 
 export class AddStudentDto {
