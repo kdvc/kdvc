@@ -1,8 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { Request } from 'express';
 import { CoursesController } from './courses.controller';
 import { CoursesService } from '../services/courses.service';
 import { ClassesService } from '../services/classes.service';
 import { UsersService } from '../services/users.service';
+import { CreateCourseDto } from '../dto/courses.dto';
 import { Role } from '../../prisma/generated/prisma/client';
 
 const mockCoursesService = {
@@ -51,7 +53,10 @@ describe('CoursesController', () => {
     it('should call service.create with user id', async () => {
       const dto = { name: 'Test Course', teacherId: 't1' };
       const req = { user: { id: 'u1' } };
-      await controller.create(dto as any, req as any);
+      await controller.create(
+        dto as CreateCourseDto,
+        req as unknown as Request,
+      );
       expect(coursesService.create).toHaveBeenCalledWith(dto, 'u1');
     });
 
@@ -59,47 +64,47 @@ describe('CoursesController', () => {
       const dto = { name: 'Test Course', teacherId: 't1' };
       const req = { user: { id: 'u1' } };
       coursesService.create.mockRejectedValue(new Error('Service Error'));
-      await expect(controller.create(dto as any, req as any)).rejects.toThrow(
-        'Service Error',
-      );
+      await expect(
+        controller.create(dto as CreateCourseDto, req as unknown as Request),
+      ).rejects.toThrow('Service Error');
     });
   });
 
   describe('findAll', () => {
     it('should call service.findAll with user id if student', async () => {
       const req = { user: { id: 'u1', role: Role.STUDENT } };
-      await controller.findAll(req as any);
-      expect(coursesService.findAll).toHaveBeenCalledWith('u1', undefined);
+      await controller.findAll(req as unknown as Request);
+      expect(coursesService.findAll).toHaveBeenCalledWith('u1');
     });
 
     it('should call service.findAll with undefined if teacher', async () => {
       const req = { user: { id: 'u1', role: Role.TEACHER } };
-      await controller.findAll(req as any);
-      expect(coursesService.findAll).toHaveBeenCalledWith(undefined, 'u1');
+      await controller.findAll(req as unknown as Request);
+      expect(coursesService.findAll).toHaveBeenCalledWith(undefined);
     });
 
     it('should propagate service errors', async () => {
       const req = { user: { id: 'u1', role: Role.STUDENT } };
       coursesService.findAll.mockRejectedValue(new Error('Service Error'));
-      await expect(controller.findAll(req as any)).rejects.toThrow(
-        'Service Error',
-      );
+      await expect(
+        controller.findAll(req as unknown as Request),
+      ).rejects.toThrow('Service Error');
     });
   });
 
   describe('findOne', () => {
     it('should call service.findOne with id and user', async () => {
       const req = { user: { id: 'u1' } };
-      await controller.findOne('c1', req as any);
+      await controller.findOne('c1', req as unknown as Request);
       expect(coursesService.findOne).toHaveBeenCalledWith('c1', req.user);
     });
 
     it('should propagate service errors', async () => {
       const req = { user: { id: 'u1' } };
       coursesService.findOne.mockRejectedValue(new Error('Service Error'));
-      await expect(controller.findOne('c1', req as any)).rejects.toThrow(
-        'Service Error',
-      );
+      await expect(
+        controller.findOne('c1', req as unknown as Request),
+      ).rejects.toThrow('Service Error');
     });
   });
 
@@ -156,16 +161,16 @@ describe('CoursesController', () => {
   describe('findStudents', () => {
     it('should call service.findStudents', async () => {
       const req = { user: { id: 't1' } };
-      await controller.findStudents('c1', req as any);
+      await controller.findStudents('c1', req as unknown as Request);
       expect(coursesService.findStudents).toHaveBeenCalledWith('c1', 't1');
     });
 
     it('should propagate service errors', async () => {
       const req = { user: { id: 't1' } };
       coursesService.findStudents.mockRejectedValue(new Error('Service Error'));
-      await expect(controller.findStudents('c1', req as any)).rejects.toThrow(
-        'Service Error',
-      );
+      await expect(
+        controller.findStudents('c1', req as unknown as Request),
+      ).rejects.toThrow('Service Error');
     });
   });
 

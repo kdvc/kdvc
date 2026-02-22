@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { Request, Response } from 'express';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { UsersService } from '../services/users.service';
@@ -51,19 +52,20 @@ describe('AuthController', () => {
         refresh_token: 'refresh_token',
       };
 
-      service.authenticateWithGoogle.mockResolvedValue(result as any);
+      service.authenticateWithGoogle.mockResolvedValue(result);
 
-      const res = { cookie: jest.fn() };
+      const cookieFn = jest.fn();
+      const res = { cookie: cookieFn } as unknown as Response;
 
-      await controller.googleCallback(code, res as any);
+      await controller.googleCallback(code, res);
 
       expect(service.authenticateWithGoogle).toHaveBeenCalledWith(code);
-      expect(res.cookie).toHaveBeenCalledWith(
+      expect(cookieFn).toHaveBeenCalledWith(
         'id_token',
         'id_token',
         expect.any(Object),
       );
-      expect(res.cookie).toHaveBeenCalledWith(
+      expect(cookieFn).toHaveBeenCalledWith(
         'refresh_token',
         'refresh_token',
         expect.any(Object),
@@ -78,19 +80,20 @@ describe('AuthController', () => {
         // no refresh_token
       };
 
-      service.authenticateWithGoogle.mockResolvedValue(result as any);
+      service.authenticateWithGoogle.mockResolvedValue(result);
 
-      const res = { cookie: jest.fn() };
+      const cookieFn = jest.fn();
+      const res = { cookie: cookieFn } as unknown as Response;
 
-      await controller.googleCallback(code, res as any);
+      await controller.googleCallback(code, res);
 
       expect(service.authenticateWithGoogle).toHaveBeenCalledWith(code);
-      expect(res.cookie).toHaveBeenCalledWith(
+      expect(cookieFn).toHaveBeenCalledWith(
         'id_token',
         'id_token',
         expect.any(Object),
       );
-      expect(res.cookie).not.toHaveBeenCalledWith(
+      expect(cookieFn).not.toHaveBeenCalledWith(
         'refresh_token',
         expect.anything(),
         expect.anything(),
@@ -107,13 +110,14 @@ describe('AuthController', () => {
         refresh_token: 'refresh_token',
       };
 
-      service.authenticateWithGoogle.mockResolvedValue(result as any);
+      service.authenticateWithGoogle.mockResolvedValue(result);
 
-      const res = { cookie: jest.fn() };
+      const cookieFn = jest.fn();
+      const res = { cookie: cookieFn } as unknown as Response;
 
-      await controller.googleCallback('code', res as any);
+      await controller.googleCallback('code', res);
 
-      expect(res.cookie).toHaveBeenCalledWith(
+      expect(cookieFn).toHaveBeenCalledWith(
         'id_token',
         'id_token',
         expect.objectContaining({ secure: true }),
@@ -126,28 +130,40 @@ describe('AuthController', () => {
   describe('googleLogin', () => {
     it('should login with Authorization header', async () => {
       const req = { headers: { authorization: 'Bearer token' } };
-      await controller.googleLogin(req as any, {} as any);
+      await controller.googleLogin(
+        req as unknown as Request,
+        {} as unknown as { idToken?: string },
+      );
       expect(service.loginWithGoogleIdToken).toHaveBeenCalledWith('token');
     });
 
     it('should ignore Authorization header if not Bearer', async () => {
       const req = { headers: { authorization: 'Basic token' } };
       const body = { idToken: 'bodyToken' };
-      await controller.googleLogin(req as any, body as any);
+      await controller.googleLogin(
+        req as unknown as Request,
+        body as unknown as { idToken?: string },
+      );
       expect(service.loginWithGoogleIdToken).toHaveBeenCalledWith('bodyToken');
     });
 
     it('should login with body idToken if header missing', async () => {
       const req = { headers: {} };
       const body = { idToken: 'token' };
-      await controller.googleLogin(req as any, body as any);
+      await controller.googleLogin(
+        req as unknown as Request,
+        body as unknown as { idToken?: string },
+      );
       expect(service.loginWithGoogleIdToken).toHaveBeenCalledWith('token');
     });
 
     it('should throw UnauthorizedException if no valid token provided', async () => {
       const req = { headers: { authorization: 'Basic token' } };
       await expect(
-        controller.googleLogin(req as any, {} as any),
+        controller.googleLogin(
+          req as unknown as Request,
+          {} as unknown as { idToken?: string },
+        ),
       ).rejects.toThrow(UnauthorizedException);
     });
   });
@@ -163,7 +179,7 @@ describe('AuthController', () => {
   describe('getProfile', () => {
     it('should return req.user', () => {
       const req = { user: { id: 'u1' } };
-      const result = controller.getProfile(req as any);
+      const result = controller.getProfile(req as unknown as Request);
       expect(result).toEqual({ id: 'u1' });
     });
   });

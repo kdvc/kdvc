@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import type { Application } from 'express';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
 import { PrismaService } from './../src/database/prisma.service';
@@ -73,7 +74,7 @@ describe('CoursesController (e2e) - Batch Add Students', () => {
     });
 
     // 4. Batch Add Students
-    const response = await request(app.getHttpServer())
+    const response = await request(app.getHttpServer() as Application)
       .post(`/courses/${course.id}/students/batch`)
       .send({
         emails: [student1.email, student2.email],
@@ -98,7 +99,7 @@ describe('CoursesController (e2e) - Batch Add Students', () => {
     expect(studentIds).toContain(student2.id);
 
     // 6. Test Idempotency (adding same students again)
-    const response2 = await request(app.getHttpServer())
+    const response2 = await request(app.getHttpServer() as Application)
       .post(`/courses/${course.id}/students/batch`)
       .send({
         emails: [student1.email, student2.email],
@@ -129,7 +130,7 @@ describe('CoursesController (e2e) - Batch Add Students', () => {
       },
     });
 
-    await request(app.getHttpServer())
+    await request(app.getHttpServer() as Application)
       .post(`/courses/${course.id}/students/batch`)
       .send({
         emails: ['nonexistent@test.com'],
