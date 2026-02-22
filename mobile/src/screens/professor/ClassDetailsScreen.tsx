@@ -5,7 +5,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  Share,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,7 +15,11 @@ import {
   useProfessorAttendanceHistory,
 } from '../../hooks/useProfessorClassDetails';
 import { AddStudentModal } from '../../components/AddStudentModal';
+import { AttendanceModal } from '../../components/AttendanceModal';
 import { useAddStudents } from '../../hooks/useAddStudents';
+import { ExportService } from '../../services/exportService';
+import { apiFetch } from '../../services/api';
+import { useStartAttendance } from '../../domain/bluetooth/useStartAttendance';
 
 type TabType = 'students' | 'attendance';
 
@@ -29,12 +32,16 @@ export default function ClassDetailsScreen() {
   const { data: classStudents = [] } = useProfessorClassStudents(
     discipline?.id ?? '',
   );
-  const { data: attendanceHistory = [] } = useProfessorAttendanceHistory(
-    discipline?.id ?? '',
-  );
+  const { data: attendanceHistory = [], refetch: refetchHistory } =
+    useProfessorAttendanceHistory(discipline?.id ?? '');
 
   const [addStudentModalVisible, setAddStudentModalVisible] = useState(false);
+  const [attendanceModalVisible, setAttendanceModalVisible] = useState(false);
+  const [currentClassId, setCurrentClassId] = useState<string>('');
+  const [studentsForAttendance, setStudentsForAttendance] = useState<any[]>([]);
+
   const { mutate: addStudents, isPending: isAddingStudents } = useAddStudents();
+  const { startAttendance, stopAttendance } = useStartAttendance();
 
   const handleAddStudents = (emails: string[]) => {
     addStudents(
@@ -53,49 +60,109 @@ export default function ClassDetailsScreen() {
 
   const handleExport = async () => {
     try {
-      let csvContent =
-        'Matrícula,Nome,Total de Presenças,Total de Aulas,Percentual\n';
+      const csvContent = ExportService.generateCourseSummaryCSV(
+        classStudents,
+        attendanceHistory,
+      );
+      const safeName = (discipline?.name || 'turma')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9]/g, '_');
+      const filename = `relatorio_${safeName}.csv`;
+      const title = `Relatório de Chamada - ${discipline?.name || 'Turma'}`;
 
-      classStudents.forEach((student: any) => {
-        const totalClasses = 50;
-        const presents = Math.floor(Math.random() * 10) + 40;
-        const percentage = ((presents / totalClasses) * 100).toFixed(1);
-
-        csvContent += `${student.enrollmentId},${student.name},${presents},${totalClasses},${percentage}%\n`;
-      });
-
-      const result = await Share.share({
-        message: csvContent,
-        title: `Relatório de Chamada - ${discipline?.name || 'Turma'}`,
-      });
-      if (result.action === Share.sharedAction) {
-        // shared
-      }
+      await ExportService.exportToCSV(csvContent, filename, title);
     } catch (error: any) {
       Alert.alert('Erro', error.message);
     }
   };
 
+  const handleEditAttendance = async (classId: string) => {
+    try {
+      // Fetch specific class details to get current attendance
+      const classDetails = await apiFetch<any>(`/classes/${classId}`);
+      const currentAttendance = classDetails.attendances || [];
+
+      // Merge with all students
+      const studentList = classStudents.map((s: any) => ({
+        ...s,
+        present: currentAttendance.some((a: any) => a.studentId === s.id),
+      }));
+
+      setStudentsForAttendance(studentList);
+      setCurrentClassId(classId);
+
+      const btOk = await startAttendance(classId);
+      if (!btOk) return;
+
+      setAttendanceModalVisible(true);
+    } catch (error) {
+      console.error('Failed to load class attendance', error);
+      Alert.alert('Erro', 'Não foi possível carregar a chamada.');
+    }
+  };
+
+  const handleSetPresence = async (studentId: string, present: boolean) => {
+    // Optimistic update
+    setStudentsForAttendance(prevStudents =>
+      prevStudents.map(student =>
+        student.id === studentId ? { ...student, present } : student,
+      ),
+    );
+
+    try {
+      if (present) {
+        await apiFetch(`/classes/${currentClassId}/attendance`, {
+          method: 'POST',
+          body: JSON.stringify({ studentId }),
+        });
+      } else {
+        await apiFetch(`/classes/${currentClassId}/attendance/${studentId}`, {
+          method: 'DELETE',
+        });
+      }
+    } catch (error) {
+      console.error('Failed to update attendance', error);
+      // Rollback
+      setStudentsForAttendance(prevStudents =>
+        prevStudents.map(student =>
+          student.id === studentId
+            ? { ...student, present: !present }
+            : student,
+        ),
+      );
+      Alert.alert('Erro', 'Não foi possível registrar a presença.');
+    }
+  };
+
+  const handleCloseAttendanceModal = () => {
+    setAttendanceModalVisible(false);
+    stopAttendance();
+    refetchHistory(); // Refresh the list to show updated counts
+  };
+
   const handleExportAttendance = async (attendanceId: string) => {
     try {
-      const attendance = attendanceHistory.find(a => a.id === attendanceId);
-      if (!attendance) return;
+      const attendanceItem = attendanceHistory.find(
+        (a: any) => a.id === attendanceId,
+      );
+      if (!attendanceItem) return;
 
-      let csvContent = `Matrícula,Nome,Presença (${attendance.date})\n`;
+      const csvContent = ExportService.generateAttendanceCSV(
+        classStudents,
+        attendanceItem,
+      );
+      const safeName = (discipline?.name || 'turma')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9]/g, '_');
+      const filename = `chamada_${safeName}_${attendanceItem.date.replace(
+        /\//g,
+        '-',
+      )}.csv`;
+      const title = `Chamada - ${discipline?.name} - ${attendanceItem.date}`;
 
-      classStudents.forEach((student: any) => {
-        const isPresent = Math.random() > 0.1 ? 'Presente' : 'Ausente';
-        csvContent += `${student.enrollmentId},${student.name},${isPresent}\n`;
-      });
-
-      const result = await Share.share({
-        message: csvContent,
-        title: `Chamada - ${discipline?.name} - ${attendance.date}`,
-      });
-
-      if (result.action === Share.sharedAction) {
-        // Shared
-      }
+      await ExportService.exportToCSV(csvContent, filename, title);
     } catch (error: any) {
       Alert.alert('Erro', error.message);
     }
@@ -166,7 +233,9 @@ export default function ClassDetailsScreen() {
           </View>
           <View>
             <Text style={styles.studentName}>{item.name}</Text>
-            <Text style={styles.studentId}>Matrícula: {item.enrollmentId}</Text>
+            <Text style={styles.studentId}>
+              Matrícula: {item.enrollmentId || 'N/A'}
+            </Text>
           </View>
         </View>
       )}
@@ -192,7 +261,7 @@ export default function ClassDetailsScreen() {
               <View style={styles.statRow}>
                 <Text style={styles.statLabel}>Presença</Text>
                 <Text style={styles.statValue}>
-                  {item.presentCount}/{item.totalCount}
+                  {item.presentCount}/{classStudents.length}
                 </Text>
               </View>
               <View style={styles.attendanceBar}>
@@ -200,7 +269,11 @@ export default function ClassDetailsScreen() {
                   style={[
                     styles.attendanceProgress,
                     {
-                      width: `${(item.presentCount / item.totalCount) * 100}%`,
+                      width: `${
+                        classStudents.length > 0
+                          ? (item.presentCount / classStudents.length) * 100
+                          : 0
+                      }%`,
                     },
                   ]}
                 />
@@ -210,12 +283,37 @@ export default function ClassDetailsScreen() {
 
           <View style={styles.separator} />
 
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleExportAttendance(item.id)}
-          >
-            <Text style={styles.actionButtonText}>Exportar Chamada</Text>
-          </TouchableOpacity>
+          <View style={styles.actionsContainer}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => handleEditAttendance(item.classId)} // use classId from useProfessorAttendanceHistory mapping
+            >
+              <Icon
+                name="edit"
+                size={20}
+                color="#4F378B"
+                style={{ marginRight: 8 }}
+              />
+              <Text style={[styles.actionButtonText, { color: '#4F378B' }]}>
+                Editar
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.verticalSeparator} />
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => handleExportAttendance(item.id)}
+            >
+              <Icon
+                name="download"
+                size={20}
+                color="#EA1D2C"
+                style={{ marginRight: 8 }}
+              />
+              <Text style={styles.actionButtonText}>Exportar</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
     />
@@ -245,6 +343,14 @@ export default function ClassDetailsScreen() {
         onClose={() => setAddStudentModalVisible(false)}
         onAdd={handleAddStudents}
         isLoading={isAddingStudents}
+      />
+
+      <AttendanceModal
+        visible={attendanceModalVisible}
+        disciplineName={discipline?.name || ''}
+        students={studentsForAttendance}
+        onClose={handleCloseAttendanceModal}
+        onSetPresence={handleSetPresence}
       />
     </SafeAreaView>
   );
@@ -294,7 +400,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   activeTab: {
-    borderBottomColor: '#EA1D2C',
+    borderBottomColor: '#4F378B', // Changed to match theme
   },
   tabText: {
     fontSize: 14,
@@ -302,7 +408,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   activeTabText: {
-    color: '#EA1D2C',
+    color: '#4F378B', // Changed to match theme
     fontWeight: 'bold',
   },
   content: {
@@ -412,25 +518,37 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#F0F0F0',
   },
+  actionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-evenly', // Distribute buttons evenly
+  },
   actionButton: {
+    flex: 1,
     padding: 16,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+  },
+  verticalSeparator: {
+    width: 1,
+    height: '60%',
+    backgroundColor: '#F0F0F0',
   },
   actionButtonText: {
     color: '#EA1D2C',
-    fontSize: 15,
-    fontWeight: 'bold',
+    fontSize: 14,
+    fontWeight: '600',
   },
   fab: {
     position: 'absolute',
     right: 16,
     bottom: 80,
     backgroundColor: '#4F378B',
-    width: 80,
-    height: 80,
-    borderRadius: 50,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 4,

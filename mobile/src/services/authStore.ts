@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '../hooks/useLogin';
 
 export const STORAGE_KEYS = {
+  USER: 'user',
   ROLE: 'userRole',
   ACCESS_TOKEN: '@kdvc/access_token',
   REFRESH_TOKEN: '@kdvc/refresh_token',
@@ -41,6 +42,10 @@ export async function setTokens(user: User, access: string, refresh: string) {
   ]);
 }
 
+export async function updateCurrentUser(user: User) {
+  await AsyncStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+}
+
 export async function clearTokens() {
   accessToken = null;
   refreshToken = null;
@@ -48,5 +53,6 @@ export async function clearTokens() {
     STORAGE_KEYS.ACCESS_TOKEN,
     STORAGE_KEYS.REFRESH_TOKEN,
     STORAGE_KEYS.CURRENT_USER,
+    STORAGE_KEYS.ROLE,
   ]);
 }

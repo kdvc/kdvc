@@ -31,12 +31,15 @@ const mockPrismaService = {
   },
   user: {
     findMany: jest.fn(),
+    create: jest.fn(),
   },
 };
 
 const mockUsersService = {
   findTeacher: jest.fn(),
   findStudent: jest.fn(),
+  validateEmailAndGetRole: jest.fn(),
+  inferNameFromEmail: jest.fn(),
 };
 
 describe('CoursesService', () => {
@@ -258,36 +261,61 @@ describe('CoursesService', () => {
   describe('addStudentsByEmail', () => {
     it('should add valid students who are not enrolled', async () => {
       prisma.course.findUnique.mockResolvedValue({ id: 'c1' });
+      usersService.validateEmailAndGetRole.mockReturnValue(Role.STUDENT);
+      usersService.inferNameFromEmail.mockReturnValue('Student');
+
       prisma.user.findMany.mockResolvedValue([
-        { id: 's1', role: Role.STUDENT, email: 's1@test.com' },
+        { id: 's1', role: Role.STUDENT, email: 'student@ccc.ufcg.edu.br' },
       ]);
       prisma.studentCourse.findMany.mockResolvedValue([]); // No existing enrollments
 
-      const result = await service.addStudentsByEmail('c1', ['s1@test.com']);
+      const result = await service.addStudentsByEmail('c1', [
+        'student@ccc.ufcg.edu.br',
+      ]);
 
       expect(prisma.studentCourse.createMany).toHaveBeenCalled();
-      expect(result.added).toContain('s1@test.com');
+      expect(result.added).toContain('student@ccc.ufcg.edu.br');
     });
 
-    it('should not add already enrolled students', async () => {
+    it('should create and add new students if they do not exist', async () => {
       prisma.course.findUnique.mockResolvedValue({ id: 'c1' });
-      prisma.user.findMany.mockResolvedValue([
-        { id: 's1', role: Role.STUDENT, email: 's1@test.com' },
+      usersService.validateEmailAndGetRole.mockReturnValue(Role.STUDENT);
+      usersService.inferNameFromEmail.mockReturnValue('New');
+
+      prisma.user.findMany.mockResolvedValue([]); // No existing users
+      prisma.user.create.mockResolvedValue({
+        id: 'new-s1',
+        email: 'new@ccc.ufcg.edu.br',
+        role: Role.STUDENT,
+        name: 'New',
+      } as any);
+      prisma.studentCourse.findMany.mockResolvedValue([]); // No existing enrollments
+
+      const result = await service.addStudentsByEmail('c1', [
+        'new@ccc.ufcg.edu.br',
       ]);
-      prisma.studentCourse.findMany.mockResolvedValue([{ studentId: 's1' }]);
 
-      const result = await service.addStudentsByEmail('c1', ['s1@test.com']);
-
-      expect(prisma.studentCourse.createMany).not.toHaveBeenCalled();
-      expect(result.added).toHaveLength(0);
+      expect(prisma.user.create).toHaveBeenCalledWith({
+        data: {
+          email: 'new@ccc.ufcg.edu.br',
+          name: 'New',
+          password: '',
+          role: Role.STUDENT,
+        },
+      });
+      expect(prisma.studentCourse.createMany).toHaveBeenCalled();
+      expect(result.added).toContain('new@ccc.ufcg.edu.br');
     });
 
-    it('should throw BadRequestException if no valid students found', async () => {
+    it('should throw BadRequestException if valid emails are provided but no students created/found', async () => {
+      // This case might be if all are invalid or filtered out
       prisma.course.findUnique.mockResolvedValue({ id: 'c1' });
-      prisma.user.findMany.mockResolvedValue([]);
+      usersService.validateEmailAndGetRole.mockImplementation(() => {
+        throw new ForbiddenException();
+      });
 
       await expect(
-        service.addStudentsByEmail('c1', ['invalid@test.com']),
+        service.addStudentsByEmail('c1', ['invalid@gmail.com']),
       ).rejects.toThrow(BadRequestException);
     });
   });

@@ -8,8 +8,8 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLogin } from '../hooks/useLogin';
+import { getCurrentUser } from '../services/authStore';
 
 export default function LoginScreen() {
   const navigation = useNavigation<any>();
@@ -18,21 +18,17 @@ export default function LoginScreen() {
 
   const checkExistingLogin = useCallback(async () => {
     try {
-      // Check if user is already signed in with Google
       const isSignedIn = GoogleSignin.hasPreviousSignIn();
 
       if (isSignedIn) {
-        // Check if role is saved
-        const savedRole = await AsyncStorage.getItem('userRole');
-        if (savedRole === 'professor') {
-          navigation.replace('ProfessorHome');
-        } else if (savedRole === 'student') {
-          navigation.replace('StudentHome');
-        } else {
-          // Signed in but no role? Go to Role Selection
-          // Optional: navigation.replace('Home');
-          // But usually we wait for user interaction or auto-login logic here.
-          // Let's just let the user click sign in, which will then route them.
+        // If we have a stored role from a previous successful login, we can try to redirect
+        // But optimally, we should re-verify with backend or just let them click sign-in if token expired.
+        // For now, let's just let them sign in again to be safe and ensure fresh role check
+        // Or if you want auto-login:
+        const user = await getCurrentUser();
+        if (user) {
+          if (user.role === 'TEACHER') navigation.replace('ProfessorHome');
+          else if (user.role === 'STUDENT') navigation.replace('StudentHome');
         }
       }
     } catch (error) {
@@ -64,18 +60,20 @@ export default function LoginScreen() {
         throw new Error();
       }
 
-      const { user, created } = await login(data.idToken);
+      const { user } = await login(data.idToken);
 
-      if (!created && user.role === 'TEACHER') {
+      // Strict role redirection based on backend response
+      if (user.role === 'TEACHER') {
         navigation.replace('ProfessorHome');
-      } else if (!created && user.role === 'STUDENT') {
+      } else if (user.role === 'STUDENT') {
         navigation.replace('StudentHome');
       } else {
-        // First time setup or role not selected
-        navigation.replace('Home');
+        // Should not happen with strict validation, but fallback
+        Alert.alert('Erro', 'Papel de usuário não identificado.');
       }
     } catch (error: any) {
       console.log(error);
+      GoogleSignin.signOut();
 
       let message = 'Erro desconhecido no login com Google';
 
@@ -85,6 +83,13 @@ export default function LoginScreen() {
         message = 'Login já está em andamento';
       } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
         message = 'Google Play Services não disponível';
+      } else if (
+        error.response?.status === 403 ||
+        error.message?.includes('403')
+      ) {
+        // ForbiddenException from backend (e.g. invalid email domain)
+        message =
+          'Apenas emails @ccc.ufcg.edu.br (Aluno) ou @computacao/@dsc (Professor) são permitidos.';
       }
 
       Alert.alert('Erro no login', message, [{ text: 'OK' }], {
@@ -114,7 +119,9 @@ export default function LoginScreen() {
 
         <View style={styles.footerContainer}>
           <View style={styles.cardInfo}>
-            <Text style={styles.signInLabel}>Acesse sua conta</Text>
+            <Text style={styles.signInLabel}>
+              Acesse sua conta institucional
+            </Text>
             <GoogleSigninButton
               size={GoogleSigninButton.Size.Wide}
               color={GoogleSigninButton.Color.Dark}

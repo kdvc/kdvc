@@ -1,6 +1,6 @@
 import { getAccessToken } from './authStore';
 
-const BASE_URL = 'http://localhost:8000';
+const BASE_URL = 'https://kdvc.ogustavo.dev';
 
 type RequestOptions = Omit<RequestInit, 'headers'> & {
   headers?: Record<string, string>;
@@ -24,7 +24,12 @@ export async function apiFetch<T = unknown>(
     }
   }
 
-  console.log('Making request to ' + `${BASE_URL}${path}`);
+  console.log(
+    'Making request to ' +
+      (options.method ?? 'GET') +
+      ' ' +
+      `${BASE_URL}${path}`,
+  );
 
   const res = await fetch(`${BASE_URL}${path}`, {
     ...rest,
