@@ -1,72 +1,40 @@
 import React from 'react';
 import { act, create, ReactTestRenderer } from 'react-test-renderer';
 
-// Mock hooks used by screens
+// Mock all hooks/services used by BluetoothScreen
 jest.mock('../../hooks/useLogin', () => ({
-    useLogin: () => ({
-        mutateAsync: jest.fn().mockResolvedValue({ user: { role: 'STUDENT' } }),
-    }),
+    useLogin: () => ({ mutateAsync: jest.fn().mockResolvedValue({ user: { role: 'STUDENT' } }) }),
 }));
 jest.mock('../../hooks/useProfessorDisciplines', () => ({
-    useProfessorDisciplines: () => ({
-        data: [],
-        isLoading: false,
-        refetch: jest.fn(),
-    }),
+    useProfessorDisciplines: () => ({ data: [], isLoading: false, refetch: jest.fn() }),
 }));
 jest.mock('../../hooks/useCreateCourse', () => ({
-    useCreateCourse: () => ({
-        mutateAsync: jest.fn().mockResolvedValue({}),
-    }),
+    useCreateCourse: () => ({ mutateAsync: jest.fn().mockResolvedValue({}) }),
 }));
 jest.mock('../../hooks/useProfessorClassDetails', () => ({
-    useProfessorClassStudents: () => ({
-        data: [],
-        isLoading: false,
-    }),
-    useProfessorAttendanceHistory: () => ({
-        data: [],
-        isLoading: false,
-    }),
+    useProfessorClassStudents: () => ({ data: [], isLoading: false }),
+    useProfessorAttendanceHistory: () => ({ data: [], isLoading: false }),
 }));
 jest.mock('../../hooks/useStudentClasses', () => ({
-    useStudentClasses: () => ({
-        data: [],
-        isLoading: false,
-        refetch: jest.fn(),
-    }),
+    useStudentClasses: () => ({ data: [], isLoading: false, refetch: jest.fn() }),
 }));
 jest.mock('../../hooks/useRemoveCourse', () => ({
-    useRemoveCourse: () => ({
-        mutateAsync: jest.fn().mockResolvedValue({}),
-    }),
+    useRemoveCourse: () => ({ mutateAsync: jest.fn().mockResolvedValue({}) }),
 }));
 jest.mock('../../hooks/useRemoveStudent', () => ({
-    useRemoveStudent: () => ({
-        mutateAsync: jest.fn().mockResolvedValue({}),
-    }),
+    useRemoveStudent: () => ({ mutateAsync: jest.fn().mockResolvedValue({}) }),
 }));
 jest.mock('../../hooks/useUpdateUser', () => ({
-    useUpdateUser: () => ({
-        mutateAsync: jest.fn().mockResolvedValue({}),
-    }),
+    useUpdateUser: () => ({ mutateAsync: jest.fn().mockResolvedValue({}) }),
 }));
 jest.mock('../../hooks/useAddStudents', () => ({
-    useAddStudents: () => ({
-        mutateAsync: jest.fn().mockResolvedValue({}),
-    }),
+    useAddStudents: () => ({ mutateAsync: jest.fn().mockResolvedValue({}) }),
 }));
 jest.mock('../../hooks/useClassById', () => ({
-    useCourseById: () => ({
-        data: null,
-        isLoading: false,
-    }),
+    useCourseById: () => ({ data: null, isLoading: false }),
 }));
 jest.mock('../../hooks/useProfessorStudents', () => ({
-    useProfessorStudents: () => ({
-        data: [],
-        isLoading: false,
-    }),
+    useProfessorStudents: () => ({ data: [], isLoading: false }),
 }));
 jest.mock('../../services/api', () => ({
     apiFetch: jest.fn().mockResolvedValue({}),
@@ -110,60 +78,13 @@ jest.mock('../../context/StudentAttendanceContext', () => ({
     }),
     StudentAttendanceProvider: ({ children }: any) => children,
 }));
-
-// Mock CreateForm
 jest.mock('../../../CreateForm', () => {
     const React = require('react');
     return (props: any) => React.createElement('View', { testID: 'CreateForm' });
 });
 
-import LoginScreen from '../../screens/LoginScreen';
-import BluetoothScreen from '../../screens/BluetoothScreen';
+import BluetoothScreen from '../BluetoothScreen';
 
-// ------------------------------------------------------------------
-// LoginScreen
-// ------------------------------------------------------------------
-describe('LoginScreen', () => {
-    it('renders correctly', async () => {
-        let tree!: ReactTestRenderer;
-        await act(async () => { tree = create(<LoginScreen />); });
-        expect(tree.toJSON()).toBeTruthy();
-    });
-
-    it('displays app title', async () => {
-        let tree!: ReactTestRenderer;
-        await act(async () => { tree = create(<LoginScreen />); });
-        expect(JSON.stringify(tree.toJSON())).toContain('Keep Daily');
-    });
-
-    it('displays Virtual Check-in', async () => {
-        let tree!: ReactTestRenderer;
-        await act(async () => { tree = create(<LoginScreen />); });
-        expect(JSON.stringify(tree.toJSON())).toContain('Virtual Check-in');
-    });
-
-    it('displays KDVC abbreviation', async () => {
-        let tree!: ReactTestRenderer;
-        await act(async () => { tree = create(<LoginScreen />); });
-        expect(JSON.stringify(tree.toJSON())).toContain('KDVC');
-    });
-
-    it('displays version', async () => {
-        let tree!: ReactTestRenderer;
-        await act(async () => { tree = create(<LoginScreen />); });
-        expect(JSON.stringify(tree.toJSON())).toContain('Versão 1.0.0');
-    });
-
-    it('displays sign in label', async () => {
-        let tree!: ReactTestRenderer;
-        await act(async () => { tree = create(<LoginScreen />); });
-        expect(JSON.stringify(tree.toJSON())).toContain('Acesse sua conta institucional');
-    });
-});
-
-// ------------------------------------------------------------------
-// BluetoothScreen
-// ------------------------------------------------------------------
 describe('BluetoothScreen', () => {
     it('renders correctly', async () => {
         let tree!: ReactTestRenderer;
