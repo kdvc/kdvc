@@ -20,54 +20,57 @@ const Stack = createNativeStackNavigator();
 const queryClient = new QueryClient();
 
 export default function App() {
-  usePermissions();
-
   useEffect(() => {
     loadTokens();
   }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
-      <StudentAttendanceProvider>
-        <SafeAreaProvider>
-          <PaperProvider>
-            <NavigationContainer>
-              <Stack.Navigator initialRouteName="Login">
-                <Stack.Screen
-                  name="Login"
-                  component={LoginScreen}
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen
-                  name="StudentHome"
-                  component={StudentHomeScreen}
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen
-                  name="ProfessorHome"
-                  component={ProfessorHomeScreen}
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen
-                  name="Bluetooth"
-                  component={BluetoothScreen}
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen
-                  name="ClassDetails"
-                  component={ClassDetailsScreen}
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen
-                  name="StudentClassDetails"
-                  component={StudentClassDetailsScreen}
-                  options={{ headerShown: false }}
-                />
-              </Stack.Navigator>
-            </NavigationContainer>
-          </PaperProvider>
-        </SafeAreaProvider>
-      </StudentAttendanceProvider>
+      <SafeAreaProvider>
+        <PaperProvider>
+          <NavigationContainer>
+            <Stack.Navigator initialRouteName="Login">
+              <Stack.Screen
+                name="Login"
+                component={LoginScreen}
+                options={{ headerShown: false }}
+              />
+
+              <Stack.Screen name="StudentHome" options={{ headerShown: false }}>
+                {props => (
+                  <StudentAttendanceProvider>
+                    <StudentHomeScreen {...props} />
+                  </StudentAttendanceProvider>
+                )}
+              </Stack.Screen>
+
+              <Stack.Screen name="StudentClassDetails" options={{ headerShown: false }}>
+                {props => (
+                  <StudentAttendanceProvider>
+                    <StudentClassDetailsScreen {...props} />
+                  </StudentAttendanceProvider>
+                )}
+              </Stack.Screen>
+
+              <Stack.Screen
+                name="ProfessorHome"
+                component={ProfessorHomeScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="Bluetooth"
+                component={BluetoothScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="ClassDetails"
+                component={ClassDetailsScreen}
+                options={{ headerShown: false }}
+              />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </PaperProvider>
+      </SafeAreaProvider>
     </QueryClientProvider>
   );
 }

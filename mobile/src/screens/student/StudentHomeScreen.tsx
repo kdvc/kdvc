@@ -111,7 +111,9 @@ export default function StudentHomeScreen() {
         keyExtractor={item => item.id}
         contentContainerStyle={styles.listContainer}
         renderItem={({ item }) => {
-          const activeClass = courseClassMap[item.id];
+          const activeClass = (courseClassMap && typeof courseClassMap === 'object' && item)
+            ? (courseClassMap as any)[item.id]
+            : undefined;
           return (
             <ClassCard
               title={item.name}

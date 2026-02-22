@@ -2,16 +2,11 @@ import { useCallback, useState } from 'react';
 import { startBroadcast, stopBroadcast } from '../../ble/BleBroadcaster';
 import { INDENTIFIER } from './types';
 
-export type useAdvertiserProps = {
-  allowed: boolean;
-};
-
-export const useAdvertiser = ({ allowed }: useAdvertiserProps) => {
+export const useAdvertiser = () => {
   const [isAdvertising, setIsAdvertising] = useState<boolean>(false);
 
   const startAdvertising = useCallback(
     (uuid: string) => {
-
       const uuidBytes =
         uuid
           .replace(/-/g, '')
@@ -19,12 +14,6 @@ export const useAdvertiser = ({ allowed }: useAdvertiserProps) => {
           ?.map(byte => parseInt(byte, 16)) || [];
 
       const message = [INDENTIFIER, ...uuidBytes];
-
-      console.log('[BLE Broadcaster] Starting broadcast...');
-      console.log('[BLE Broadcaster] Original classId UUID:', uuid);
-      console.log('[BLE Broadcaster] identifier:', INDENTIFIER);
-      console.log('[BLE Broadcaster] parsed uuidBytes:', uuidBytes);
-      console.log('[BLE Broadcaster] full payload message:', message);
 
       try {
         startBroadcast(INDENTIFIER, message);
@@ -34,7 +23,7 @@ export const useAdvertiser = ({ allowed }: useAdvertiserProps) => {
         setIsAdvertising(false);
       }
     },
-    [allowed],
+    [],
   );
 
   const stopAdvertising = async () => {

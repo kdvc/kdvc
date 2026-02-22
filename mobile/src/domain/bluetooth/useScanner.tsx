@@ -12,6 +12,9 @@ export const useScanner = ({ allowed, onDeviceFound }: useScannerProps) => {
   const [isScanning, setIsScanning] = useState(false);
 
   const startScanWrapper = useCallback(() => {
+    if (!allowed) {
+      return () => { };
+    }
 
     setDevices([]);
     setIsScanning(true);
@@ -28,13 +31,16 @@ export const useScanner = ({ allowed, onDeviceFound }: useScannerProps) => {
         });
       },
       error => {
-        console.error('Scan error:', error);
+        console.error('[useScanner] Scan error:', error);
         setIsScanning(false);
       },
     );
 
-    return unsubscribe;
-  }, [allowed]);
+    return () => {
+      unsubscribe();
+      setIsScanning(false);
+    };
+  }, [allowed, onDeviceFound]); // Added onDeviceFound to deps for completeness
 
   const stopScanWrapper = useCallback(async () => {
     await stopScan();

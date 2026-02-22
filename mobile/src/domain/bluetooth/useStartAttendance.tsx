@@ -10,12 +10,15 @@ const { BleBroadcaster } = NativeModules as {
 };
 
 export const useStartAttendance = () => {
-  const { allowed } = usePermissions();
-  const { isAdvertising, startAdvertising, stopAdvertising } = useAdvertiser({
-    allowed,
-  });
+  const { allowed, checkPermissions } = usePermissions();
+  const { isAdvertising, startAdvertising, stopAdvertising } = useAdvertiser();
 
   const startAttendance = async (classId: string): Promise<boolean> => {
+    if (!allowed) {
+      console.log('[useStartAttendance] allowed is false, checking permissions manually...');
+      const ok = await checkPermissions();
+      if (!ok) return false;
+    }
     try {
       const btEnabled = await BleBroadcaster.isBluetoothEnabled();
       if (!btEnabled) {
@@ -32,6 +35,7 @@ export const useStartAttendance = () => {
 
     console.log('Starting attendance for class:', classId);
 
+    // Call startAdvertising - the Ref inside useAdvertiser will now see the true value
     startAdvertising(classId);
     return true;
   };
