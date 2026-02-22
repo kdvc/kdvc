@@ -9,6 +9,8 @@ import {
 } from '@nestjs/common';
 import { Role } from '../../prisma/generated/prisma/client';
 
+type UserWithRole = { id: string; role: Role };
+
 const mockPrismaService = {
   course: {
     findUnique: jest.fn(),
@@ -69,7 +71,10 @@ describe('CoursesService', () => {
       usersService.findTeacher.mockResolvedValue({ id: 't1' });
       prisma.course.create.mockResolvedValue({ id: 'c1', ...dto });
 
-      const result = await service.create(dto as any, 't1');
+      const result = await service.create(
+        dto as { name: string; teacherId: string },
+        't1',
+      );
       expect(result).toBeDefined();
     });
   });
@@ -185,7 +190,7 @@ describe('CoursesService', () => {
       const result = await service.findOne('c1', {
         id: 't1',
         role: Role.TEACHER,
-      } as any);
+      } as UserWithRole);
       expect(result).toBe(course);
     });
 
@@ -194,7 +199,7 @@ describe('CoursesService', () => {
       prisma.course.findUnique.mockResolvedValue(course);
 
       await expect(
-        service.findOne('c1', { id: 't2', role: Role.TEACHER } as any),
+        service.findOne('c1', { id: 't2', role: Role.TEACHER } as UserWithRole),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -211,10 +216,10 @@ describe('CoursesService', () => {
       prisma.course.findUnique.mockResolvedValue(course);
       prisma.class.findMany.mockResolvedValue(classes);
 
-      const result: any = await service.findOne('c1', {
+      const result = await service.findOne('c1', {
         id: 's1',
         role: Role.STUDENT,
-      } as any);
+      } as UserWithRole);
 
       expect(result.classes).toBeDefined();
       expect(result.classes[0].present).toBe(true);
@@ -229,7 +234,7 @@ describe('CoursesService', () => {
       prisma.course.findUnique.mockResolvedValue(course);
 
       await expect(
-        service.findOne('c1', { id: 's1', role: Role.STUDENT } as any),
+        service.findOne('c1', { id: 's1', role: Role.STUDENT } as UserWithRole),
       ).rejects.toThrow(ForbiddenException);
     });
   });

@@ -1,7 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { Request } from 'express';
 import { ClassesController } from './classes.controller';
 import { ClassesService } from '../services/classes.service';
 import { UsersService } from '../services/users.service';
+import { CreateClassDto } from '../dto/classes.dto';
 import { BadRequestException } from '@nestjs/common';
 
 const mockClassesService = {
@@ -39,7 +41,7 @@ describe('ClassesController', () => {
 
   it('should create class', async () => {
     const dto = { topic: 'T', date: '2023-01-01', courseId: 'c1' };
-    await controller.create(dto as any);
+    await controller.create(dto as CreateClassDto);
     expect(service.create).toHaveBeenCalledWith(dto);
   });
 
@@ -66,7 +68,7 @@ describe('ClassesController', () => {
       service.registerAttendance.mockResolvedValue(result);
 
       await expect(
-        controller.registerAttendance('c1', {}, req as any),
+        controller.registerAttendance('c1', {}, req as unknown as Request),
       ).resolves.toEqual(result);
       expect(service.registerAttendance).toHaveBeenCalledWith('c1', 's1');
     });
@@ -77,16 +79,20 @@ describe('ClassesController', () => {
       service.registerAttendance.mockResolvedValue(result);
 
       await expect(
-        controller.registerAttendance('c1', { studentId: 's2' }, req as any),
+        controller.registerAttendance(
+          'c1',
+          { studentId: 's2' },
+          req as unknown as Request,
+        ),
       ).resolves.toEqual(result);
       expect(service.registerAttendance).toHaveBeenCalledWith('c1', 's2');
     });
 
     it('should throw BadRequestException if teacher provides no studentId', () => {
       const req = { user: { id: 't1', role: 'TEACHER' } };
-      expect(() => controller.registerAttendance('c1', {}, req as any)).toThrow(
-        BadRequestException,
-      );
+      expect(() =>
+        controller.registerAttendance('c1', {}, req as unknown as Request),
+      ).toThrow(BadRequestException);
     });
   });
 

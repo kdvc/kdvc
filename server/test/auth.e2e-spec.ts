@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import type { Application } from 'express';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
 import { PrismaService } from './../src/database/prisma.service';
@@ -29,7 +30,9 @@ describe('AuthController & Authenticated Decorator (e2e)', () => {
 
   describe('GET /auth/profile', () => {
     it('should return 401 if not authenticated', () => {
-      return request(app.getHttpServer()).get('/auth/profile').expect(401);
+      return request(app.getHttpServer() as Application)
+        .get('/auth/profile')
+        .expect(401);
     });
 
     it('should return user profile if authenticated', async () => {
@@ -48,7 +51,7 @@ describe('AuthController & Authenticated Decorator (e2e)', () => {
       const token = loginResult.access_token;
 
       // 3. Call Protected Route
-      const response = await request(app.getHttpServer())
+      const response = await request(app.getHttpServer() as Application)
         .get('/auth/profile')
         .set('Authorization', `Bearer ${token}`)
         .expect(200);
@@ -75,7 +78,7 @@ describe('AuthController & Authenticated Decorator (e2e)', () => {
       });
       const login = await authService.login(user);
 
-      await request(app.getHttpServer())
+      await request(app.getHttpServer() as Application)
         .get('/auth/admin')
         .set('Authorization', `Bearer ${login.access_token}`)
         .expect(403);
@@ -92,7 +95,7 @@ describe('AuthController & Authenticated Decorator (e2e)', () => {
       });
       const login = await authService.login(user);
 
-      await request(app.getHttpServer())
+      await request(app.getHttpServer() as Application)
         .get('/auth/admin')
         .set('Authorization', `Bearer ${login.access_token}`)
         .expect(200);

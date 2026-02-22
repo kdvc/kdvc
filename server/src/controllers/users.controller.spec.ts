@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { Request } from 'express';
 import { UsersController } from './users.controller';
 import { UsersService } from '../services/users.service';
+import { CreateUserDto } from '../dto/users.dto';
 import { UnauthorizedException } from '@nestjs/common';
 
 const mockUsersService = {
@@ -36,7 +38,7 @@ describe('UsersController', () => {
         password: 'p',
         role: 'STUDENT',
       };
-      await controller.create(dto as any);
+      await controller.create(dto as CreateUserDto);
       expect(service.create).toHaveBeenCalledWith(dto);
     });
 
@@ -48,7 +50,7 @@ describe('UsersController', () => {
         role: 'STUDENT',
       };
       service.create.mockRejectedValue(new Error('Service Error'));
-      await expect(controller.create(dto as any)).rejects.toThrow(
+      await expect(controller.create(dto as CreateUserDto)).rejects.toThrow(
         'Service Error',
       );
     });
@@ -70,38 +72,38 @@ describe('UsersController', () => {
     it('should update user if ids match', async () => {
       const dto = { name: 'New' };
       const req = { user: { id: 'u1' } };
-      await controller.update('u1', dto, req as any);
+      await controller.update('u1', dto, req as unknown as Request);
       expect(service.update).toHaveBeenCalledWith('u1', dto);
     });
 
     it('should throw UnauthorizedException if ids do not match', () => {
       const dto = { name: 'New' };
       const req = { user: { id: 'u2' } };
-      expect(() => controller.update('u1', dto, req as any)).toThrow(
-        UnauthorizedException,
-      );
+      expect(() =>
+        controller.update('u1', dto, req as unknown as Request),
+      ).toThrow(UnauthorizedException);
     });
 
     it('should propagate service errors', async () => {
       const dto = { name: 'New' };
       const req = { user: { id: 'u1' } };
       service.update.mockRejectedValue(new Error('Service Error'));
-      await expect(controller.update('u1', dto, req as any)).rejects.toThrow(
-        'Service Error',
-      );
+      await expect(
+        controller.update('u1', dto, req as unknown as Request),
+      ).rejects.toThrow('Service Error');
     });
   });
 
   describe('remove', () => {
     it('should remove user if ids match', async () => {
       const req = { user: { id: 'u1' } };
-      await controller.remove('u1', req as any);
+      await controller.remove('u1', req as unknown as Request);
       expect(service.remove).toHaveBeenCalledWith('u1');
     });
 
     it('should throw UnauthorizedException if ids do not match', () => {
       const req = { user: { id: 'u2' } };
-      expect(() => controller.remove('u1', req as any)).toThrow(
+      expect(() => controller.remove('u1', req as unknown as Request)).toThrow(
         UnauthorizedException,
       );
     });
@@ -109,9 +111,9 @@ describe('UsersController', () => {
     it('should propagate service errors', async () => {
       const req = { user: { id: 'u1' } };
       service.remove.mockRejectedValue(new Error('Service Error'));
-      await expect(controller.remove('u1', req as any)).rejects.toThrow(
-        'Service Error',
-      );
+      await expect(
+        controller.remove('u1', req as unknown as Request),
+      ).rejects.toThrow('Service Error');
     });
   });
 });

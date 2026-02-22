@@ -34,13 +34,13 @@ jest.mock('@nestjs/swagger', () => ({
 }));
 
 describe('Main', () => {
-  it('should bootstrap', () => {
+  it('should bootstrap', async () => {
     const mockApp = {
       use: jest.fn(),
       enableCors: jest.fn(),
       useGlobalPipes: jest.fn(),
       useGlobalFilters: jest.fn(),
-      listen: jest.fn(),
+      listen: jest.fn().mockResolvedValue(undefined),
     };
 
     (NestFactory.create as jest.Mock).mockResolvedValue(mockApp);
@@ -49,7 +49,10 @@ describe('Main', () => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     require('./main');
 
+    await new Promise((r) => setImmediate(r));
+
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(NestFactory.create).toHaveBeenCalledWith(AppModule);
+    expect(mockApp.listen).toHaveBeenCalledWith(expect.anything());
   });
 });
