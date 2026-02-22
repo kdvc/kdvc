@@ -94,25 +94,25 @@ describe('CoursesService', () => {
 
   describe('update', () => {
     it('should update course if found', async () => {
-      prisma.course.findUnique.mockResolvedValue({ id: 'c1' });
+      prisma.course.findUnique.mockResolvedValue({ id: 'c1', teacherId: 't1' });
       prisma.course.update.mockResolvedValue({ id: 'c1', name: 'Updated' });
-      const result = await service.update('c1', { name: 'Updated' });
+      const result = await service.update('c1', { name: 'Updated' }, 't1');
       expect(result.name).toBe('Updated');
     });
   });
 
   describe('remove', () => {
     it('should remove course if found', async () => {
-      prisma.course.findUnique.mockResolvedValue({ id: 'c1' });
+      prisma.course.findUnique.mockResolvedValue({ id: 'c1', teacherId: 't1' });
       prisma.course.delete.mockResolvedValue({ id: 'c1' });
-      const result = await service.remove('c1');
+      const result = await service.remove('c1', 't1');
       expect(result.id).toBe('c1');
     });
   });
 
   describe('addStudent', () => {
     it('should add student to course', async () => {
-      prisma.course.findUnique.mockResolvedValue({ id: 'c1' });
+      prisma.course.findUnique.mockResolvedValue({ id: 'c1', teacherId: 't1' });
       usersService.findStudent.mockResolvedValue({ id: 's1' });
       prisma.studentCourse.findUnique.mockResolvedValue(null);
       prisma.studentCourse.create.mockResolvedValue({
@@ -120,36 +120,36 @@ describe('CoursesService', () => {
         courseId: 'c1',
       });
 
-      const result = await service.addStudent('c1', { studentId: 's1' });
+      const result = await service.addStudent('c1', { studentId: 's1' }, 't1');
       expect(result.studentId).toBe('s1');
     });
 
     it('should throw BadRequest if already enrolled', async () => {
-      prisma.course.findUnique.mockResolvedValue({ id: 'c1' });
+      prisma.course.findUnique.mockResolvedValue({ id: 'c1', teacherId: 't1' });
       usersService.findStudent.mockResolvedValue({ id: 's1' });
       prisma.studentCourse.findUnique.mockResolvedValue({ studentId: 's1' });
 
       await expect(
-        service.addStudent('c1', { studentId: 's1' }),
+        service.addStudent('c1', { studentId: 's1' }, 't1'),
       ).rejects.toThrow(BadRequestException);
     });
   });
 
   describe('removeStudent', () => {
     it('should remove student from course', async () => {
-      prisma.course.findUnique.mockResolvedValue({ id: 'c1' });
+      prisma.course.findUnique.mockResolvedValue({ id: 'c1', teacherId: 't1' });
       prisma.studentCourse.findUnique.mockResolvedValue({ studentId: 's1' });
       prisma.studentCourse.delete.mockResolvedValue({ studentId: 's1' });
 
-      const result = await service.removeStudent('c1', 's1');
+      const result = await service.removeStudent('c1', 's1', 't1');
       expect(result.studentId).toBe('s1');
     });
 
     it('should throw NotFoundException if not enrolled', async () => {
-      prisma.course.findUnique.mockResolvedValue({ id: 'c1' });
+      prisma.course.findUnique.mockResolvedValue({ id: 'c1', teacherId: 't1' });
       prisma.studentCourse.findUnique.mockResolvedValue(null);
 
-      await expect(service.removeStudent('c1', 's1')).rejects.toThrow(
+      await expect(service.removeStudent('c1', 's1', 't1')).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -255,7 +255,7 @@ describe('CoursesService', () => {
 
   describe('addStudentsByEmail', () => {
     it('should add valid students who are not enrolled', async () => {
-      prisma.course.findUnique.mockResolvedValue({ id: 'c1' });
+      prisma.course.findUnique.mockResolvedValue({ id: 'c1', teacherId: 't1' });
       usersService.validateEmailAndGetRole.mockReturnValue(Role.STUDENT);
       usersService.inferNameFromEmail.mockReturnValue('Student');
 
@@ -266,14 +266,14 @@ describe('CoursesService', () => {
 
       const result = await service.addStudentsByEmail('c1', [
         'student@ccc.ufcg.edu.br',
-      ]);
+      ], 't1');
 
       expect(prisma.studentCourse.createMany).toHaveBeenCalled();
       expect(result.added).toContain('student@ccc.ufcg.edu.br');
     });
 
     it('should create and add new students if they do not exist', async () => {
-      prisma.course.findUnique.mockResolvedValue({ id: 'c1' });
+      prisma.course.findUnique.mockResolvedValue({ id: 'c1', teacherId: 't1' });
       usersService.validateEmailAndGetRole.mockReturnValue(Role.STUDENT);
       usersService.inferNameFromEmail.mockReturnValue('New');
 
@@ -288,7 +288,7 @@ describe('CoursesService', () => {
 
       const result = await service.addStudentsByEmail('c1', [
         'new@ccc.ufcg.edu.br',
-      ]);
+      ], 't1');
 
       expect(prisma.user.create).toHaveBeenCalledWith({
         data: {
@@ -303,14 +303,13 @@ describe('CoursesService', () => {
     });
 
     it('should throw BadRequestException if valid emails are provided but no students created/found', async () => {
-      // This case might be if all are invalid or filtered out
-      prisma.course.findUnique.mockResolvedValue({ id: 'c1' });
+      prisma.course.findUnique.mockResolvedValue({ id: 'c1', teacherId: 't1' });
       usersService.validateEmailAndGetRole.mockImplementation(() => {
         throw new ForbiddenException();
       });
 
       await expect(
-        service.addStudentsByEmail('c1', ['invalid@gmail.com']),
+        service.addStudentsByEmail('c1', ['invalid@gmail.com'], 't1'),
       ).rejects.toThrow(BadRequestException);
     });
   });
