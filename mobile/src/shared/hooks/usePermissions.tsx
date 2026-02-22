@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Alert, Platform } from 'react-native';
-import { PERMISSIONS, request, RESULTS } from 'react-native-permissions';
+import { PERMISSIONS, requestMultiple, RESULTS } from 'react-native-permissions';
+import { BleManager } from 'react-native-ble-plx';
+
+const bleManager = new BleManager();
 
 export const usePermissions = () => {
   const [allowed, setAllowed] = useState<boolean>(false);
@@ -9,23 +12,33 @@ export const usePermissions = () => {
     const permissions =
       Platform.OS === 'android'
         ? [
-            PERMISSIONS.ANDROID.BLUETOOTH_SCAN,
-            PERMISSIONS.ANDROID.BLUETOOTH_CONNECT,
-            PERMISSIONS.ANDROID.BLUETOOTH_ADVERTISE,
-            PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION,
-          ]
+          PERMISSIONS.ANDROID.BLUETOOTH_SCAN,
+          PERMISSIONS.ANDROID.BLUETOOTH_CONNECT,
+          PERMISSIONS.ANDROID.BLUETOOTH_ADVERTISE,
+          PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION,
+        ]
         : Platform.OS === 'ios'
-        ? [PERMISSIONS.IOS.BLUETOOTH, PERMISSIONS.IOS.LOCATION_WHEN_IN_USE]
-        : [];
+          ? [PERMISSIONS.IOS.BLUETOOTH, PERMISSIONS.IOS.LOCATION_WHEN_IN_USE]
+          : [];
 
-    const results = await Promise.all(permissions.map(p => request(p)));
-    const allGranted = results.every(r => r === RESULTS.GRANTED);
+    const results = await requestMultiple(permissions as any);
 
-    if (!allGranted)
+    const deniedList = permissions.filter(p => results[p as any] !== RESULTS.GRANTED);
+    const allGranted = deniedList.length === 0;
+
+    if (!allGranted) {
+      console.log('Permission denied for:', deniedList);
       Alert.alert(
-        'Atenção',
-        'Algumas permissões foram negadas. Vá para as configurações do aplicativo para permitir.',
+        'Permissões Negadas',
+        `Por favor, acesse as configurações do app e permita:\n\n${deniedList.map(p => p.split('.').pop()).join('\n')}`,
       );
+    } else if (Platform.OS === 'android') {
+      try {
+        await bleManager.enable();
+      } catch (err) {
+        console.log('Bluetooth could not be automatically enabled or user denied prompt.', err);
+      }
+    }
 
     setAllowed(allGranted);
   };

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   FlatList,
   TouchableOpacity,
   Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -17,7 +18,10 @@ import {
 import { AddStudentModal } from '../../components/AddStudentModal';
 import { AttendanceModal } from '../../components/AttendanceModal';
 import { useAddStudents } from '../../hooks/useAddStudents';
+import { useRemoveCourse } from '../../hooks/useRemoveCourse';
+import { useRemoveStudent } from '../../hooks/useRemoveStudent';
 import { ExportService } from '../../services/exportService';
+import { EditCourseModal } from '../../components/EditCourseModal';
 import { apiFetch } from '../../services/api';
 import { useStartAttendance } from '../../domain/bluetooth/useStartAttendance';
 
@@ -38,10 +42,38 @@ export default function ClassDetailsScreen() {
   const [addStudentModalVisible, setAddStudentModalVisible] = useState(false);
   const [attendanceModalVisible, setAttendanceModalVisible] = useState(false);
   const [currentClassId, setCurrentClassId] = useState<string>('');
+  const [currentClassTopic, setCurrentClassTopic] = useState<string>('');
   const [studentsForAttendance, setStudentsForAttendance] = useState<any[]>([]);
+  const [editCourseModalVisible, setEditCourseModalVisible] = useState(false);
+  const [currentDiscipline, setCurrentDiscipline] = useState<any>(discipline);
 
   const { mutate: addStudents, isPending: isAddingStudents } = useAddStudents();
+  const { mutate: removeCourse } = useRemoveCourse();
+  const { mutate: removeStudent } = useRemoveStudent();
   const { startAttendance, stopAttendance } = useStartAttendance();
+
+  // Polling a cada 3s enquanto modal de chamada está aberto
+  useEffect(() => {
+    if (!attendanceModalVisible || !currentClassId) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const classDetails = await apiFetch<any>(`/classes/${currentClassId}`);
+        const currentAttendance = classDetails.attendances || [];
+
+        const studentList = classStudents.map((s: any) => ({
+          ...s,
+          present: currentAttendance.some((a: any) => a.studentId === s.id),
+        }));
+
+        setStudentsForAttendance(studentList);
+      } catch (error) {
+        console.warn('Polling attendance failed in ClassDetailsScreen:', error);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [attendanceModalVisible, currentClassId, classStudents]);
 
   const handleAddStudents = (emails: string[]) => {
     addStudents(
@@ -58,18 +90,68 @@ export default function ClassDetailsScreen() {
     );
   };
 
+  const handleRemoveCourse = () => {
+    Alert.alert(
+      'Excluir Turma',
+      `Tem certeza que deseja apagar a turma "${discipline?.name}" inteira? Esta ação não pode ser desfeita e todas as presenças serão perdidas.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: () => {
+            removeCourse(discipline.id, {
+              onSuccess: () => {
+                navigation.goBack();
+              },
+              onError: () => {
+                Alert.alert('Erro', 'Não foi possível excluir a turma.');
+              },
+            });
+          },
+        },
+      ]
+    );
+  };
+
+  const handleRemoveStudent = (studentId: string, studentName: string) => {
+    Alert.alert(
+      'Remover Aluno',
+      `Deseja realmente remover o aluno(a) ${studentName} desta turma?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Remover',
+          style: 'destructive',
+          onPress: () => {
+            removeStudent(
+              { courseId: discipline.id, studentId },
+              {
+                onError: () => {
+                  Alert.alert('Erro', 'Não foi possível remover o aluno.');
+                },
+              }
+            );
+          },
+        },
+      ]
+    );
+  };
+
   const handleExport = async () => {
     try {
+      const courseName = currentDiscipline?.name || 'Turma';
       const csvContent = ExportService.generateCourseSummaryCSV(
+        courseName,
         classStudents,
         attendanceHistory,
       );
-      const safeName = (discipline?.name || 'turma')
+      const safeName = (currentDiscipline?.name || 'turma')
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .replace(/[^a-zA-Z0-9]/g, '_');
       const filename = `relatorio_${safeName}.csv`;
-      const title = `Relatório de Chamada - ${discipline?.name || 'Turma'}`;
+      const title = `Relatório de Chamada - ${currentDiscipline?.name || 'Turma'}`;
 
       await ExportService.exportToCSV(csvContent, filename, title);
     } catch (error: any) {
@@ -79,11 +161,9 @@ export default function ClassDetailsScreen() {
 
   const handleEditAttendance = async (classId: string) => {
     try {
-      // Fetch specific class details to get current attendance
       const classDetails = await apiFetch<any>(`/classes/${classId}`);
       const currentAttendance = classDetails.attendances || [];
 
-      // Merge with all students
       const studentList = classStudents.map((s: any) => ({
         ...s,
         present: currentAttendance.some((a: any) => a.studentId === s.id),
@@ -91,14 +171,45 @@ export default function ClassDetailsScreen() {
 
       setStudentsForAttendance(studentList);
       setCurrentClassId(classId);
+      setCurrentClassTopic(classDetails.topic || '');
 
-      const btOk = await startAttendance(classId);
-      if (!btOk) return;
-
+      // Do NOT start BLE broadcasting for edits
       setAttendanceModalVisible(true);
     } catch (error) {
       console.error('Failed to load class attendance', error);
       Alert.alert('Erro', 'Não foi possível carregar a chamada.');
+    }
+  };
+
+  const handleReopenAttendance = async (classId: string) => {
+    try {
+      // Pull the current details
+      const classDetails = await apiFetch<any>(`/classes/${classId}`);
+
+      // Update the class date to NOW so it becomes the legitimate 'activeClass' for the course
+      await apiFetch(`/classes/${classId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ date: new Date().toISOString() }),
+      });
+
+      const currentAttendance = classDetails.attendances || [];
+
+      const studentList = classStudents.map((s: any) => ({
+        ...s,
+        present: currentAttendance.some((a: any) => a.studentId === s.id),
+      }));
+
+      setStudentsForAttendance(studentList);
+      setCurrentClassId(classId);
+      setCurrentClassTopic(classDetails.topic || '');
+
+      const btOk = await startAttendance(classId);
+      if (btOk) {
+        setAttendanceModalVisible(true);
+      }
+    } catch (error) {
+      console.error('Failed to reopen class attendance', error);
+      Alert.alert('Erro', 'Não foi possível reabrir a chamada.');
     }
   };
 
@@ -135,6 +246,31 @@ export default function ClassDetailsScreen() {
     }
   };
 
+  const handleRemoveAttendance = (attendanceClassId: string) => {
+    Alert.alert(
+      'Excluir Chamada',
+      'Tem certeza de que deseja excluir esta chamada? Isso removerá a lista de presença associada a ela e não pode ser desfeito.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await apiFetch(`/classes/${attendanceClassId}`, {
+                method: 'DELETE',
+              });
+              refetchHistory();
+            } catch (error) {
+              console.error('Failed to delete attendance', error);
+              Alert.alert('Erro', 'Não foi possível excluir a chamada.');
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const handleCloseAttendanceModal = () => {
     setAttendanceModalVisible(false);
     stopAttendance();
@@ -148,11 +284,13 @@ export default function ClassDetailsScreen() {
       );
       if (!attendanceItem) return;
 
+      const courseName = currentDiscipline?.name || 'Turma';
       const csvContent = ExportService.generateAttendanceCSV(
+        courseName,
         classStudents,
         attendanceItem,
       );
-      const safeName = (discipline?.name || 'turma')
+      const safeName = (currentDiscipline?.name || 'turma')
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .replace(/[^a-zA-Z0-9]/g, '_');
@@ -160,12 +298,17 @@ export default function ClassDetailsScreen() {
         /\//g,
         '-',
       )}.csv`;
-      const title = `Chamada - ${discipline?.name} - ${attendanceItem.date}`;
+      const title = `Chamada - ${currentDiscipline?.name} - ${attendanceItem.date}`;
 
       await ExportService.exportToCSV(csvContent, filename, title);
     } catch (error: any) {
       Alert.alert('Erro', error.message);
     }
+  };
+
+  const truncate = (str: string | undefined, max: number) => {
+    if (!str) return '';
+    return str.length > max ? str.substring(0, max) + '...' : str;
   };
 
   const renderHeader = () => (
@@ -177,13 +320,21 @@ export default function ClassDetailsScreen() {
         <Icon name="arrow-back" size={24} color="#4F378B" />
       </TouchableOpacity>
       <View style={styles.titleContainer}>
-        <Text style={styles.title}>
-          {discipline?.name || 'Detalhes da Turma'}
+        <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
+          {truncate(currentDiscipline?.name || 'Detalhes da Turma', 20)}
         </Text>
       </View>
-      <TouchableOpacity onPress={handleExport} style={styles.backButton}>
-        <Icon name="share" size={24} color="#4F378B" />
-      </TouchableOpacity>
+      <View style={styles.headerRightActions}>
+        <TouchableOpacity onPress={() => setEditCourseModalVisible(true)} style={styles.backButton}>
+          <Icon name="edit" size={24} color="#4F378B" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={handleExport} style={styles.backButton}>
+          <Icon name="share" size={24} color="#4F378B" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={handleRemoveCourse} style={styles.backButton}>
+          <Icon name="delete" size={24} color="#EA1D2C" />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -229,14 +380,24 @@ export default function ClassDetailsScreen() {
       renderItem={({ item }) => (
         <View style={styles.studentItem}>
           <View style={styles.avatarPlaceholder}>
-            <Text style={styles.avatarText}>{item.name.charAt(0)}</Text>
+            {item.profilePicture ? (
+              <Image source={{ uri: item.profilePicture }} style={{ width: 40, height: 40, borderRadius: 20 }} />
+            ) : (
+              <Text style={styles.avatarText}>{item.name.charAt(0)}</Text>
+            )}
           </View>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.studentName}>{item.name}</Text>
             <Text style={styles.studentId}>
               Matrícula: {item.enrollmentId || 'N/A'}
             </Text>
           </View>
+          <TouchableOpacity
+            style={styles.deleteStudentButton}
+            onPress={() => handleRemoveStudent(item.id, item.name)}
+          >
+            <Icon name="delete" size={22} color="#EA1D2C" />
+          </TouchableOpacity>
         </View>
       )}
     />
@@ -251,7 +412,10 @@ export default function ClassDetailsScreen() {
         <View style={styles.attendanceItem}>
           <View style={styles.attendanceContent}>
             <View style={styles.attendanceHeader}>
-              <Text style={styles.attendanceDate}>{item.date}</Text>
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <Text style={styles.attendanceDate} numberOfLines={1} ellipsizeMode="tail">{truncate(item.topic || 'Chamada', 18)}</Text>
+                <Text style={styles.attendanceTopic}>{item.date}</Text>
+              </View>
               <View style={styles.statusBadge}>
                 <Text style={styles.statusText}>Finalizada</Text>
               </View>
@@ -269,11 +433,10 @@ export default function ClassDetailsScreen() {
                   style={[
                     styles.attendanceProgress,
                     {
-                      width: `${
-                        classStudents.length > 0
-                          ? (item.presentCount / classStudents.length) * 100
-                          : 0
-                      }%`,
+                      width: `${classStudents.length > 0
+                        ? (item.presentCount / classStudents.length) * 100
+                        : 0
+                        }%`,
                     },
                   ]}
                 />
@@ -284,6 +447,23 @@ export default function ClassDetailsScreen() {
           <View style={styles.separator} />
 
           <View style={styles.actionsContainer}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => handleReopenAttendance(item.classId)}
+            >
+              <Icon
+                name="settings-input-antenna"
+                size={20}
+                color="#4F378B"
+                style={{ marginRight: 8 }}
+              />
+              <Text style={[styles.actionButtonText, { color: '#4F378B' }]}>
+                Reabrir
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.verticalSeparator} />
+
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => handleEditAttendance(item.classId)} // use classId from useProfessorAttendanceHistory mapping
@@ -312,6 +492,21 @@ export default function ClassDetailsScreen() {
                 style={{ marginRight: 8 }}
               />
               <Text style={styles.actionButtonText}>Exportar</Text>
+            </TouchableOpacity>
+
+            <View style={styles.verticalSeparator} />
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => handleRemoveAttendance(item.classId)}
+            >
+              <Icon
+                name="delete"
+                size={20}
+                color="#EA1D2C"
+                style={{ marginRight: 8 }}
+              />
+              <Text style={styles.actionButtonText}>Excluir</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -347,10 +542,32 @@ export default function ClassDetailsScreen() {
 
       <AttendanceModal
         visible={attendanceModalVisible}
-        disciplineName={discipline?.name || ''}
+        disciplineName={currentDiscipline?.name || ''}
+        classTopic={currentClassTopic}
         students={studentsForAttendance}
         onClose={handleCloseAttendanceModal}
         onSetPresence={handleSetPresence}
+        onUpdateTopic={async (newTopic) => {
+          try {
+            await apiFetch(`/classes/${currentClassId}`, {
+              method: 'PATCH',
+              body: JSON.stringify({ topic: newTopic }),
+            });
+            setCurrentClassTopic(newTopic);
+            refetchHistory();
+          } catch (error) {
+            console.error('Failed to update topic', error);
+          }
+        }}
+      />
+
+      <EditCourseModal
+        visible={editCourseModalVisible}
+        onClose={() => setEditCourseModalVisible(false)}
+        course={currentDiscipline}
+        onSaveSuccess={(updated) => {
+          setCurrentDiscipline((prev: any) => ({ ...prev, ...updated }));
+        }}
       />
     </SafeAreaView>
   );
@@ -375,6 +592,9 @@ const styles = StyleSheet.create({
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  headerRightActions: {
+    flexDirection: 'row',
   },
   titleContainer: {
     flex: 1,
@@ -435,11 +655,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   avatarText: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#3E3E3E',
+  },
+  deleteStudentButton: {
+    padding: 8,
   },
   studentName: {
     fontSize: 15,
@@ -473,6 +702,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#3E3E3E',
+  },
+  attendanceTopic: {
+    fontSize: 12,
+    color: '#757575',
+    flex: 1,
+    marginLeft: 8,
   },
   statusBadge: {
     backgroundColor: '#E5F7ED',

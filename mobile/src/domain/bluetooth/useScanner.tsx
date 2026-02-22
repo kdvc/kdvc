@@ -4,20 +4,23 @@ import { startScan, stopScan, ScannedDevice } from '../../ble/BleScanner';
 
 export type useScannerProps = {
   allowed: boolean;
+  onDeviceFound?: (device: ScannedDevice) => void;
 };
 
-export const useScanner = ({ allowed }: useScannerProps) => {
+export const useScanner = ({ allowed, onDeviceFound }: useScannerProps) => {
   const [devices, setDevices] = useState<ScannedDevice[]>([]);
   const [isScanning, setIsScanning] = useState(false);
 
   const startScanWrapper = useCallback(() => {
-    if (!allowed) return;
 
     setDevices([]);
     setIsScanning(true);
 
     const unsubscribe = startScan(
       device => {
+        if (onDeviceFound) {
+          onDeviceFound(device);
+        }
         setDevices(prev => {
           const exists = prev.find(d => d.address === device.address);
           if (exists) return prev;

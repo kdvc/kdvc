@@ -6,11 +6,13 @@ import {
   Modal,
   TouchableOpacity,
   FlatList,
+  TextInput,
 } from 'react-native';
 
 interface Student {
   id: string;
   name: string;
+  displayName?: string;
   enrollmentId?: string;
   present: boolean;
 }
@@ -18,18 +20,27 @@ interface Student {
 interface AttendanceModalProps {
   visible: boolean;
   disciplineName: string;
+  classTopic: string;
   students: Student[];
   onClose: () => void;
   onSetPresence: (studentId: string, present: boolean) => void;
+  onUpdateTopic?: (newTopic: string) => void;
 }
 
 export const AttendanceModal: React.FC<AttendanceModalProps> = ({
   visible,
   disciplineName,
+  classTopic,
   students,
   onClose,
   onSetPresence,
+  onUpdateTopic,
 }) => {
+  const [editingTopic, setEditingTopic] = React.useState(classTopic);
+  React.useEffect(() => { setEditingTopic(classTopic); }, [classTopic]);
+
+  const presentCount = students.filter(s => s.present).length;
+  const totalCount = students.length;
   return (
     <Modal
       animationType="slide"
@@ -40,8 +51,26 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
     >
       <View style={styles.centeredView}>
         <View style={styles.modalView}>
-          <Text style={styles.modalTitle}>Chamada - {disciplineName}</Text>
-          <Text style={styles.subtitle}>Gerencie a presença dos alunos</Text>
+          <Text style={styles.modalTitle}>{disciplineName}</Text>
+
+          <View style={styles.topicContainer}>
+            <TextInput
+              style={styles.topicInput}
+              value={editingTopic}
+              onChangeText={setEditingTopic}
+              onBlur={() => {
+                if (onUpdateTopic && editingTopic !== classTopic) {
+                  onUpdateTopic(editingTopic);
+                }
+              }}
+              placeholder="Nome da chamada"
+              placeholderTextColor="#999"
+            />
+          </View>
+
+          <Text style={styles.subtitle}>
+            Presença: {presentCount}/{totalCount} alunos
+          </Text>
 
           <FlatList
             data={students}
@@ -148,6 +177,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginBottom: 20,
+  },
+  topicContainer: {
+    width: '100%',
+    marginBottom: 12,
+  },
+  topicInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 15,
+    color: '#333',
+    backgroundColor: '#f9f9f9',
+    textAlign: 'center',
   },
   list: {
     width: '100%',

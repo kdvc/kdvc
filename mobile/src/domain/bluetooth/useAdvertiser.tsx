@@ -11,7 +11,6 @@ export const useAdvertiser = ({ allowed }: useAdvertiserProps) => {
 
   const startAdvertising = useCallback(
     (uuid: string) => {
-      if (!allowed) return;
 
       const uuidBytes =
         uuid
@@ -20,6 +19,12 @@ export const useAdvertiser = ({ allowed }: useAdvertiserProps) => {
           ?.map(byte => parseInt(byte, 16)) || [];
 
       const message = [INDENTIFIER, ...uuidBytes];
+
+      console.log('[BLE Broadcaster] Starting broadcast...');
+      console.log('[BLE Broadcaster] Original classId UUID:', uuid);
+      console.log('[BLE Broadcaster] identifier:', INDENTIFIER);
+      console.log('[BLE Broadcaster] parsed uuidBytes:', uuidBytes);
+      console.log('[BLE Broadcaster] full payload message:', message);
 
       try {
         startBroadcast(INDENTIFIER, message);

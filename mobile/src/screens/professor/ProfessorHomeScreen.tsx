@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, FlatList, Alert } from 'react-native';
+import { StyleSheet, FlatList, Alert, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { DisciplineCard } from '../../components/DisciplineCard';
 import { AttendanceModal } from '../../components/AttendanceModal';
 import { AddClassModal } from '../../components/AddClassModal';
+import { StartClassModal } from '../../components/StartClassModal';
 import ProfessorHomeHeader from '../../components/ProfessorHomeHeader';
+import { ProfileModal } from '../../components/ProfileModal';
 import { useProfessorDisciplines } from '../../hooks/useProfessorDisciplines';
 import { useCreateCourse } from '../../hooks/useCreateCourse';
 import { apiFetch } from '../../services/api';
+import { getCurrentUser } from '../../services/authStore';
 import RNFS from 'react-native-fs';
 import { useStartAttendance } from '../../domain/bluetooth/useStartAttendance';
 
@@ -28,13 +31,41 @@ export default function ProfessorHomeScreen() {
   const [addClassModalVisible, setAddClassModalVisible] = useState(false);
   const [selectedDiscipline, setSelectedDiscipline] = useState<string>('');
   const [currentClassId, setCurrentClassId] = useState<string>('');
+  const [currentClassTopic, setCurrentClassTopic] = useState<string>('');
   const [students, setStudents] = useState<any[]>([]);
 
-  const { data: disciplines = [] } = useProfessorDisciplines();
+  const [startClassModalVisible, setStartClassModalVisible] = useState(false);
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
+  const [courseForStart, setCourseForStart] = useState<{ id: string, name: string, activeClassId?: string, lastClassId?: string | null } | null>(null);
+
+  const { data: disciplines = [], refetch, isFetching } = useProfessorDisciplines();
   const { mutateAsync: createCourse } = useCreateCourse();
   const { isAdvertising, startAttendance, stopAttendance } =
     useStartAttendance();
+
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const u = await getCurrentUser();
+      if (u) {
+        try {
+          const fresh = await apiFetch<any>(`/users/${u.id}`);
+          setUser(fresh);
+        } catch (_e) {
+          setUser(u);
+        }
+      }
+    };
+    loadUser();
+  }, []);
   const [currentCourseId, setCurrentCourseId] = useState<string>('');
+
+  // Global Bluetooth Cleanup: sweep any ghost beacons from previous app crash on mount
+  useEffect(() => {
+    stopAttendance();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Polling a cada 3s enquanto modal de chamada está aberto
   useEffect(() => {
@@ -60,89 +91,81 @@ export default function ProfessorHomeScreen() {
     return () => clearInterval(interval);
   }, [modalVisible, currentClassId, currentCourseId]);
 
-  const handleStartCall = async (
+  const handleStartCall = (
     disciplineId: string,
     disciplineName: string,
-    existingClassId?: string,
+    activeClassId?: string,
+    lastClassId?: string | null,
   ) => {
-    const isReopening = !!existingClassId;
-    const title = isReopening ? 'Reabrir Chamada' : 'Iniciar Chamada';
-    const message = isReopening
-      ? `Deseja reabrir a chamada de hoje para a turma ${disciplineName}?`
-      : `Deseja iniciar a chamada para a turma ${disciplineName}?`;
-    const confirmText = isReopening ? 'Reabrir' : 'Iniciar';
+    setCourseForStart({ id: disciplineId, name: disciplineName, activeClassId, lastClassId });
+    setStartClassModalVisible(true);
+  };
 
-    Alert.alert(title, message, [
-      {
-        text: 'Cancelar',
-        style: 'cancel',
-      },
-      {
-        text: confirmText,
-        onPress: async () => {
-          setSelectedDiscipline(disciplineName);
-          setCurrentCourseId(disciplineId);
+  const proceedStartCall = async (topic?: string) => {
+    if (!courseForStart) return;
+    const { id: disciplineId, name: disciplineName, lastClassId } = courseForStart;
+    setStartClassModalVisible(false);
 
-          try {
-            // Fetch fresh list of students for the course to ensure we have everyone
-            const courseStudents = await apiFetch<any[]>(
-              `/courses/${disciplineId}/students`,
-            );
+    setSelectedDiscipline(disciplineName);
+    setCurrentCourseId(disciplineId);
 
-            let classId = existingClassId;
-            let currentAttendance: any[] = [];
+    try {
+      const courseStudents = await apiFetch<any[]>(`/courses/${disciplineId}/students`);
+      let classId: string | null = null;
+      let currentAttendance: any[] = [];
 
-            if (!classId) {
-              // Create new class
-              const newClass = await apiFetch<{ id: string }>('/classes', {
-                method: 'POST',
-                body: JSON.stringify({
-                  topic: `Chamada - ${disciplineName}`,
-                  date: new Date().toISOString(),
-                  courseId: disciplineId,
-                }),
-              });
-              classId = newClass.id;
+      // If topic is provided, it's a NEW class. If undefined, it's REOPEN.
+      if (topic !== undefined) {
+        const newClass = await apiFetch<{ id: string }>('/classes', {
+          method: 'POST',
+          body: JSON.stringify({
+            topic: topic || `Chamada - ${disciplineName}`,
+            date: new Date().toISOString(),
+            courseId: disciplineId,
+          }),
+        });
+        classId = newClass.id;
+        setCurrentClassTopic(topic || `Chamada - ${disciplineName}`);
 
-              // Invalidate queries to update home screen button state
-              queryClient.invalidateQueries({
-                queryKey: ['professorDisciplines'],
-              });
-            } else {
-              // Fetch existing attendance
-              // Assuming GET /classes/:id returns the class with attendances relation
-              // based on typical Prisma usage or we have a specific endpoint?
-              // Let's check api.ts or just rely on what we can easily add.
-              // Ideally: GET /classes/:id includes attendances.
-              // If not, we might need GET /classes/:id/attendance (if it exists)
-              // Let's try GET /classes/:id first.
-              const classDetails = await apiFetch<any>(`/classes/${classId}`);
-              currentAttendance = classDetails.attendances || [];
-            }
+        queryClient.invalidateQueries({
+          queryKey: ['professorDisciplines'],
+        });
+      } else if (lastClassId) {
+        // Reopen existing from lastClassId
+        classId = lastClassId;
 
-            if (classId) {
-              setCurrentClassId(classId);
-              const btOk = await startAttendance(classId);
-              if (!btOk) return;
+        // Update the class date to NOW so it becomes the legitimate 'activeClass' for the course
+        await apiFetch(`/classes/${classId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ date: new Date().toISOString() }),
+        });
 
-              // Merge students with attendance
-              const studentList = courseStudents.map((s: any) => ({
-                ...s,
-                present: currentAttendance.some(
-                  (a: any) => a.studentId === s.id,
-                ),
-              }));
+        const classDetails = await apiFetch<any>(`/classes/${classId}`);
+        currentAttendance = classDetails.attendances || [];
+        setCurrentClassTopic(classDetails.topic || '');
+      } else {
+        return;
+      }
 
-              setStudents(studentList);
-              setModalVisible(true);
-            }
-          } catch (error) {
-            console.error('Failed to start/open class session', error);
-            Alert.alert('Erro', 'Não foi possível acessar a chamada.');
-          }
-        },
-      },
-    ]);
+      if (classId) {
+        setCurrentClassId(classId);
+
+        // Start BLE broadcasting for both NEW and REOPENED active classes
+        const btOk = await startAttendance(classId);
+        if (!btOk) return;
+
+        const studentList = courseStudents.map((s: any) => ({
+          ...s,
+          present: currentAttendance.some((a: any) => a.studentId === s.id),
+        }));
+
+        setStudents(studentList);
+        setModalVisible(true);
+      }
+    } catch (error) {
+      console.error('Failed to start/open class session', error);
+      Alert.alert('Erro', 'Não foi possível acessar a chamada.');
+    }
   };
 
   const handleSetPresence = async (studentId: string, present: boolean) => {
@@ -209,7 +232,12 @@ export default function ProfessorHomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ProfessorHomeHeader onAddClass={handleAddClass} />
+      <ProfessorHomeHeader
+        onAddClass={handleAddClass}
+        userName={user?.displayName || user?.name}
+        userPhoto={user?.profilePicture}
+        onOpenProfile={() => setProfileModalVisible(true)}
+      />
 
       <FlatList
         data={disciplines}
@@ -220,8 +248,10 @@ export default function ProfessorHomeScreen() {
             schedule={formatSchedule(item.schedules)}
             isActive={true}
             studentCount={item.studentCount}
-            onStartCall={() =>
-              handleStartCall(item.id, item.name, item.activeClassId)
+            picture={item.picture}
+            lastClassId={item.lastClassId}
+            onStartCall={(lastClassId) =>
+              handleStartCall(item.id, item.name, item.activeClassId, lastClassId)
             }
             hasActiveCall={!!item.activeClassId}
             onPress={() =>
@@ -230,23 +260,58 @@ export default function ProfessorHomeScreen() {
           />
         )}
         contentContainerStyle={styles.listContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={isFetching}
+            onRefresh={refetch}
+            colors={['#4F378B']}
+          />
+        }
       />
 
       <AttendanceModal
-        visible={isAdvertising}
+        visible={modalVisible}
         disciplineName={selectedDiscipline}
+        classTopic={currentClassTopic}
         students={students}
         onClose={() => {
           setModalVisible(false);
           stopAttendance();
         }}
         onSetPresence={handleSetPresence}
+        onUpdateTopic={async (newTopic) => {
+          try {
+            await apiFetch(`/classes/${currentClassId}`, {
+              method: 'PATCH',
+              body: JSON.stringify({ topic: newTopic }),
+            });
+            setCurrentClassTopic(newTopic);
+          } catch (error) {
+            console.error('Failed to update topic', error);
+          }
+        }}
       />
 
       <AddClassModal
         visible={addClassModalVisible}
         onClose={() => setAddClassModalVisible(false)}
         onSave={handleSaveClass}
+      />
+
+      <StartClassModal
+        visible={startClassModalVisible}
+        hasActiveClass={!!courseForStart?.activeClassId}
+        hasAnyClass={!!courseForStart?.lastClassId}
+        onClose={() => setStartClassModalVisible(false)}
+        onStartNew={topic => proceedStartCall(topic)}
+        onReopen={() => proceedStartCall()}
+      />
+
+      <ProfileModal
+        visible={profileModalVisible}
+        onClose={() => setProfileModalVisible(false)}
+        user={user}
+        onSaveSuccess={(updatedUser) => setUser(updatedUser)}
       />
     </SafeAreaView>
   );

@@ -3,9 +3,8 @@ import Share from 'react-native-share';
 import { Alert } from 'react-native';
 
 export const ExportService = {
-  generateCourseSummaryCSV: (students: any[], attendanceHistory: any[]) => {
-    const header =
-      'Matrícula,Nome,Total de Presenças,Total de Aulas,Percentual';
+  generateCourseSummaryCSV: (courseName: string, students: any[], attendanceHistory: any[]) => {
+    const header = 'matricula,nome,presencas,aulas,percentual';
 
     if (!students || students.length === 0) {
       return '\uFEFF' + header;
@@ -20,28 +19,31 @@ export const ExportService = {
       const percentage =
         totalClasses > 0 ? ((presents / totalClasses) * 100).toFixed(1) : '0.0';
 
-      return `${student.enrollmentId || 'N/A'},${
-        student.name
-      },${presents},${totalClasses},${percentage}%`;
+      return `${student.enrollmentId || 'N/A'},${student.name
+        },${presents},${totalClasses},${percentage}%`;
     });
 
     return '\uFEFF' + [header, ...rows].join('\n');
   },
 
-  generateAttendanceCSV: (students: any[], attendanceItem: any) => {
-    const header = `Matrícula,Nome,Presença (${attendanceItem.date})`;
+  generateAttendanceCSV: (courseName: string, students: any[], attendanceItem: any) => {
+    const header = 'matricula,nome,status,data';
 
     if (!students || students.length === 0) {
       return '\uFEFF' + header;
     }
 
     const rows = students.map((student: any) => {
-      const isPresent = attendanceItem.raw?.attendances?.some(
+      const attendance = attendanceItem.raw?.attendances?.find(
         (a: any) => a.studentId === student.id,
       );
-      return `${student.enrollmentId || 'N/A'},${student.name},${
-        isPresent ? 'Presente' : 'Ausente'
-      }`;
+      const isPresent = !!attendance;
+
+      const machineDate = attendance?.createdAt
+        ? new Date(attendance.createdAt).toISOString()
+        : '';
+
+      return `${student.enrollmentId || 'N/A'},${student.name},${isPresent ? 'Presente' : 'Ausente'},${machineDate}`;
     });
 
     return '\uFEFF' + [header, ...rows].join('\n');
@@ -49,7 +51,8 @@ export const ExportService = {
 
   exportToCSV: async (content: string, filename: string, title: string) => {
     try {
-      const path = `${RNFS.DownloadDirectoryPath}/${filename}`;
+      const safeFilename = filename.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_.-]/g, '');
+      const path = `${RNFS.CachesDirectoryPath}/${safeFilename}`;
       await RNFS.writeFile(path, content, 'utf8');
 
       const shareOptions = {

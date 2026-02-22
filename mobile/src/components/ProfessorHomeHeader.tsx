@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
@@ -16,10 +16,16 @@ const colors = {
 
 interface ProfessorHomeHeaderProps {
   onAddClass?: () => void;
+  userName?: string;
+  userPhoto?: string;
+  onOpenProfile?: () => void;
 }
 
 export default function ProfessorHomeHeader({
   onAddClass,
+  userName,
+  userPhoto,
+  onOpenProfile,
 }: ProfessorHomeHeaderProps) {
   const navigation = useNavigation<any>();
 
@@ -45,7 +51,7 @@ export default function ProfessorHomeHeader({
 
         {/* Center: Greeting/Title */}
         <View style={styles.textContainer}>
-          <Text style={styles.greeting}>Olá, Professor</Text>
+          <Text style={styles.greeting}>Olá, {userName?.split(' ')[0] || 'Professor'} 👨‍🏫</Text>
         </View>
 
         {/* Right: Actions */}
@@ -57,8 +63,12 @@ export default function ProfessorHomeHeader({
           )}
 
           {/* Profile Icon */}
-          <TouchableOpacity style={styles.avatarContainer}>
-            <MaterialIcons name="person" size={24} color={colors.primary} />
+          <TouchableOpacity style={styles.avatarContainer} onPress={onOpenProfile}>
+            {userPhoto ? (
+              <Image source={{ uri: userPhoto }} style={styles.avatarImage} />
+            ) : (
+              <MaterialIcons name="person" size={24} color={colors.primary} />
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -114,5 +124,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.genericAvatar,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
 });
