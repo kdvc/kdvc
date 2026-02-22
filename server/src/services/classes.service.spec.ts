@@ -12,6 +12,9 @@ const mockPrismaService = {
     update: jest.fn(),
     delete: jest.fn(),
   },
+  course: {
+    findUnique: jest.fn(),
+  },
   studentCourse: {
     findUnique: jest.fn(),
   },
@@ -56,6 +59,7 @@ describe('ClassesService', () => {
         date: new Date('2023-01-01'),
         courseId: 'c1',
       };
+      prisma.course.findUnique.mockResolvedValue({ id: 'c1' }); // Check course existence
       prisma.class.create.mockResolvedValue({ id: '1', ...dto });
 
       const result = await service.create(dto);
