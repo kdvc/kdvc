@@ -1,11 +1,6 @@
 import { getAccessToken } from './authStore';
 
-// const BASE_URL = 'https://kdvc.ogustavo.dev';
-const BASE_URL = 'http://192.168.1.106:8000'; // Machine's local network IP
-// const BASE_URL = 'http://YOUR_LOCAL_IP:8000'; // Use this if testing on a physical device
-// const BASE_URL = 'http://YOUR_LOCAL_IP:8000'; // Use this if testing on a physical device
-// const BASE_URL = 'http://YOUR_LOCAL_IP:8000'; // Use this if testing on a physical device
-
+const BASE_URL = 'https://kdvc.ogustavo.dev';
 
 type RequestOptions = Omit<RequestInit, 'headers'> & {
   headers?: Record<string, string>;
