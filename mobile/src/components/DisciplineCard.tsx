@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     flexDirection: 'column',
-    marginBottom: 12,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#F0F0F0',
 
@@ -135,7 +135,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 16,
-    gap: 16,
   },
 
   avatar: {
@@ -146,6 +145,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
+    marginRight: 16,
   },
 
   avatarImage: {
@@ -162,7 +162,6 @@ const styles = StyleSheet.create({
 
   textContainer: {
     flex: 1,
-    gap: 2,
   },
 
   title: {
@@ -170,6 +169,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1D1B20',
     letterSpacing: 0.1,
+    marginBottom: 2,
   },
 
   subtitle: {

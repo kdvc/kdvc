@@ -325,13 +325,11 @@ const styles = StyleSheet.create({
   listContainer: {
     paddingHorizontal: 24,
     paddingTop: 16,
-    gap: 16,
   },
   footerContainer: {
     marginTop: 20,
     marginBottom: 40,
     width: '100%',
-    gap: 16,
   },
   actionButton: {
     backgroundColor: '#4F378B',

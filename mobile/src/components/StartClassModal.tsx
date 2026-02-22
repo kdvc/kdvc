@@ -76,13 +76,17 @@ export const StartClassModal: React.FC<StartClassModalProps> = ({
                     </View>
 
                     <View style={styles.buttonContainer}>
-                        <TouchableOpacity style={[styles.button, styles.startButton]} onPress={handleStartNew}>
-                            <Text style={[styles.buttonText, styles.startButtonText]}>Iniciar Nova</Text>
+                        <TouchableOpacity
+                            style={[styles.modalButton, styles.startButton]}
+                            onPress={() => onStartNew(topic)}
+                        >            <Text style={[styles.buttonText, styles.startButtonText]}>Iniciar Nova</Text>
                         </TouchableOpacity>
 
                         {hasAnyClass && (
-                            <TouchableOpacity style={[styles.button, styles.reopenButton]} onPress={onReopen}>
-                                <Text style={[styles.buttonText, styles.reopenButtonText]}>Reabrir Última</Text>
+                            <TouchableOpacity
+                                style={[styles.modalButton, styles.reopenButton]}
+                                onPress={onReopen}
+                            >                <Text style={[styles.buttonText, styles.reopenButtonText]}>Reabrir Última</Text>
                             </TouchableOpacity>
                         )}
 
@@ -140,16 +144,16 @@ const styles = StyleSheet.create({
         color: colors.text,
     },
     buttonContainer: {
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 10,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 10,
     },
-    button: {
+    modalButton: {
+        flex: 1,
         paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderRadius: 100,
+        borderRadius: 8,
         alignItems: 'center',
-        width: '100%',
+        marginHorizontal: 5,
     },
     cancelButton: {
         paddingVertical: 10,

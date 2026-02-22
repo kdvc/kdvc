@@ -112,10 +112,10 @@ const styles = StyleSheet.create({
   rightContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
   },
   actionButton: {
     padding: 4,
+    marginRight: 8, // Replaced 'gap' with 'marginRight' for spacing between actionButton and avatarContainer
   },
   avatarContainer: {
     width: 40,

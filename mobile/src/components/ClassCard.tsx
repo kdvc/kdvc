@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#F0F0F0',
 
@@ -140,7 +140,6 @@ const styles = StyleSheet.create({
   left: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
     flex: 1,
   },
 
@@ -152,6 +151,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
+    marginRight: 16,
   },
 
   avatarImage: {
@@ -168,7 +168,6 @@ const styles = StyleSheet.create({
 
   textContainer: {
     flex: 1,
-    gap: 2,
   },
 
   title: {
@@ -176,6 +175,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1D1B20',
     letterSpacing: 0.1,
+    marginBottom: 2,
   },
 
   subtitle: {
@@ -185,7 +185,6 @@ const styles = StyleSheet.create({
 
   rightContainer: {
     alignItems: 'center',
-    gap: 8,
     marginLeft: 12,
     flexShrink: 1, // ensure the right side can shrink if text is huge
   },
@@ -204,6 +203,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#C8E6C9',
     flexShrink: 1, // Let badge shrink if text is long
+    marginBottom: 8,
   },
 
   activeLabel: {

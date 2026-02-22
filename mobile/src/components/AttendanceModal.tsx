@@ -218,7 +218,6 @@ const styles = StyleSheet.create({
   },
   actionButtons: {
     flexDirection: 'row',
-    gap: 10,
   },
   iconButton: {
     width: 40,
@@ -228,6 +227,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#ccc',
+    marginHorizontal: 5,
   },
   presentButtonActive: {
     backgroundColor: '#4CAF50', // Solid Green

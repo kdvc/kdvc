@@ -178,6 +178,5 @@ const styles = StyleSheet.create({
   listContainer: {
     paddingHorizontal: 24,
     paddingTop: 24,
-    gap: 16,
   },
 });

@@ -721,12 +721,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   attendanceStats: {
-    gap: 8,
   },
   statRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   statLabel: {
     fontSize: 14,
