@@ -19,6 +19,15 @@ export const StudentAttendanceProvider: React.FC<{ children: React.ReactNode }> 
     const [registeredIds, setRegisteredIds] = useState<Set<string>>(new Set());
 
     const { allowed } = usePermissions();
+    const [isRoleAllowed, setIsRoleAllowed] = useState(false);
+
+    useEffect(() => {
+        getCurrentUser().then(user => {
+            setIsRoleAllowed(user?.role === 'STUDENT' || user?.role === 'student');
+        });
+    }, []);
+
+    const effectiveAllowed = allowed && isRoleAllowed;
     const lastSeenRef = useRef<Record<string, number>>({});
     const courseMapRef = useRef<Record<string, { courseId: string, topic: string, date: string }>>({});
     const blacklistRef = useRef<Record<string, number>>({});
@@ -115,13 +124,22 @@ export const StudentAttendanceProvider: React.FC<{ children: React.ReactNode }> 
                 console.warn('Error parsing UUID from BLE device', e);
             }
         }
-    }, [allowed]);
+    }, [effectiveAllowed]);
 
-    const { startScan } = useScanner({ allowed, onDeviceFound: handleDeviceFound });
+    const { startScan: launchScan } = useScanner({ allowed: effectiveAllowed, onDeviceFound: handleDeviceFound });
 
     useEffect(() => {
-        startScan();
-    }, [startScan]);
+        let cleanup: (() => void) | void;
+        if (effectiveAllowed === true) {
+            cleanup = launchScan();
+        }
+
+        return () => {
+            if (cleanup) {
+                cleanup();
+            }
+        };
+    }, [effectiveAllowed, launchScan]);
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -159,5 +177,13 @@ export const StudentAttendanceProvider: React.FC<{ children: React.ReactNode }> 
 };
 
 export function useStudentAttendance() {
-    return useContext(AttendanceContext);
+    const context = useContext(AttendanceContext);
+    if (!context || typeof context.courseClassMap === 'undefined') {
+        return {
+            courseClassMap: {},
+            registeredIds: new Set(),
+            setRegisteredIds: () => { },
+        } as AttendanceContextData;
+    }
+    return context;
 }
