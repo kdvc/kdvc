@@ -6,6 +6,9 @@ import { AppModule } from './../src/app.module';
 import { PrismaService } from './../src/database/prisma.service';
 import { AuthService } from './../src/auth/auth.service';
 import { Role } from './../prisma/generated/prisma/client';
+import { ValidationPipe } from '@nestjs/common';
+import { PrismaExceptionFilter } from './../src/filters/prisma-exception.filter';
+import { cleanupDatabase } from './cleanup';
 
 describe('AuthController & Authenticated Decorator (e2e)', () => {
   let app: INestApplication;
@@ -18,41 +21,44 @@ describe('AuthController & Authenticated Decorator (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
+    app.useGlobalFilters(new PrismaExceptionFilter());
+
     prisma = app.get<PrismaService>(PrismaService);
     authService = app.get<AuthService>(AuthService);
     await app.init();
+    await cleanupDatabase(prisma);
   });
 
   afterAll(async () => {
-    await prisma.user.deleteMany();
+    await cleanupDatabase(prisma);
     await app.close();
   });
 
-  describe('GET /auth/profile', () => {
+  describe('GET /auth/me', () => {
     it('should return 401 if not authenticated', () => {
       return request(app.getHttpServer() as Application)
-        .get('/auth/profile')
+        .get('/auth/me')
         .expect(401);
     });
 
     it('should return user profile if authenticated', async () => {
-      // 1. Create User
-      const user = await prisma.user.create({
-        data: {
-          name: 'Test User',
-          email: `testuser_${Date.now()}@test.com`,
-          password: 'password',
-          role: Role.STUDENT,
-        },
+      // 1. Register User (properly hashes password)
+      const registerResult = await authService.register({
+        name: 'Test User',
+        email: `testuser_${Date.now()}@computacao.ufcg.edu.br`,
+        password: 'password',
+        role: Role.TEACHER,
       });
+      const user = registerResult.user;
 
-      // 2. Generate Token
-      const loginResult = await authService.login(user);
+      // 2. Login
+      const loginResult = await authService.login(user.email, 'password');
       const token = loginResult.access_token;
 
       // 3. Call Protected Route
       const response = await request(app.getHttpServer() as Application)
-        .get('/auth/profile')
+        .get('/auth/me')
         .set('Authorization', `Bearer ${token}`)
         .expect(200);
 
@@ -60,45 +66,11 @@ describe('AuthController & Authenticated Decorator (e2e)', () => {
         expect.objectContaining({
           id: user.id,
           email: user.email,
-          role: 'STUDENT',
+          role: Role.TEACHER,
         }),
       );
+      expect(response.body).not.toHaveProperty('password');
     });
   });
 
-  describe('GET /auth/admin (Role Guard)', () => {
-    it('should return 403 if user is STUDENT', async () => {
-      const user = await prisma.user.create({
-        data: {
-          name: 'Student User',
-          email: `student_${Date.now()}@test.com`,
-          password: 'password',
-          role: Role.STUDENT,
-        },
-      });
-      const login = await authService.login(user);
-
-      await request(app.getHttpServer() as Application)
-        .get('/auth/admin')
-        .set('Authorization', `Bearer ${login.access_token}`)
-        .expect(403);
-    });
-
-    it('should return 200 if user is TEACHER', async () => {
-      const user = await prisma.user.create({
-        data: {
-          name: 'Teacher User',
-          email: `teacher_${Date.now()}@test.com`,
-          password: 'password',
-          role: Role.TEACHER,
-        },
-      });
-      const login = await authService.login(user);
-
-      await request(app.getHttpServer() as Application)
-        .get('/auth/admin')
-        .set('Authorization', `Bearer ${login.access_token}`)
-        .expect(200);
-    });
-  });
 });

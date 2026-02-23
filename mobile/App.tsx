@@ -20,6 +20,8 @@ const Stack = createNativeStackNavigator();
 const queryClient = new QueryClient();
 
 export default function App() {
+  usePermissions();
+
   useEffect(() => {
     loadTokens();
   }, []);

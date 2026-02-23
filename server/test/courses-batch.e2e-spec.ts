@@ -5,10 +5,15 @@ import request from 'supertest';
 import { AppModule } from './../src/app.module';
 import { PrismaService } from './../src/database/prisma.service';
 import { Role } from './../prisma/generated/prisma/client';
+import { AuthService } from './../src/auth/auth.service';
+import { ValidationPipe } from '@nestjs/common';
+import { PrismaExceptionFilter } from './../src/filters/prisma-exception.filter';
+import { cleanupDatabase } from './cleanup';
 
 describe('CoursesController (e2e) - Batch Add Students', () => {
   let app: INestApplication;
   let prisma: PrismaService;
+  let authService: AuthService;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -16,34 +21,31 @@ describe('CoursesController (e2e) - Batch Add Students', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
+    app.useGlobalFilters(new PrismaExceptionFilter());
+
     prisma = app.get<PrismaService>(PrismaService);
+    authService = app.get<AuthService>(AuthService);
+
     await app.init();
+    await cleanupDatabase(prisma);
   });
 
   afterAll(async () => {
-    // Cleanup
-    await prisma.studentCourse.deleteMany();
-    await prisma.course.deleteMany();
-    await prisma.user.deleteMany();
+    await cleanupDatabase(prisma);
     await app.close();
   });
 
   it('/courses/:id/students/batch (POST)', async () => {
-    // 1. Create Teacher
-    let teacher;
-    try {
-      teacher = await prisma.user.create({
-        data: {
-          name: 'Teacher One',
-          email: `teacher_${Date.now()}@test.com`,
-          password: 'password',
-          role: Role.TEACHER,
-        },
-      });
-    } catch (error) {
-      console.error('Error creating teacher:', error);
-      throw error;
-    }
+    // 1. Register Teacher (properly hashes password)
+    const teacherResult = await authService.register({
+      name: 'Teacher One',
+      email: `teacher_batch_${Date.now()}@computacao.ufcg.edu.br`,
+      password: 'password',
+      role: Role.TEACHER,
+    });
+    const teacher = teacherResult.user;
+    const teacherToken = teacherResult.access_token;
 
     // 2. Create Course
     const course = await prisma.course.create({
@@ -58,7 +60,7 @@ describe('CoursesController (e2e) - Batch Add Students', () => {
     const student1 = await prisma.user.create({
       data: {
         name: 'Student One',
-        email: `student1_${Date.now()}@test.com`,
+        email: `student1_batch_${Date.now()}@ccc.ufcg.edu.br`,
         password: 'password',
         role: Role.STUDENT,
       },
@@ -67,7 +69,7 @@ describe('CoursesController (e2e) - Batch Add Students', () => {
     const student2 = await prisma.user.create({
       data: {
         name: 'Student Two',
-        email: `student2_${Date.now()}@test.com`,
+        email: `student2_batch_${Date.now()}@ccc.ufcg.edu.br`,
         password: 'password',
         role: Role.STUDENT,
       },
@@ -76,6 +78,7 @@ describe('CoursesController (e2e) - Batch Add Students', () => {
     // 4. Batch Add Students
     const response = await request(app.getHttpServer() as Application)
       .post(`/courses/${course.id}/students/batch`)
+      .set('Authorization', `Bearer ${teacherToken}`)
       .send({
         emails: [student1.email, student2.email],
       })
@@ -101,27 +104,28 @@ describe('CoursesController (e2e) - Batch Add Students', () => {
     // 6. Test Idempotency (adding same students again)
     const response2 = await request(app.getHttpServer() as Application)
       .post(`/courses/${course.id}/students/batch`)
+      .set('Authorization', `Bearer ${teacherToken}`)
       .send({
         emails: [student1.email, student2.email],
       })
       .expect(201);
 
     expect(response2.body).toEqual({
-      message: 'All students are already enrolled',
+      message: 'All users are already enrolled',
       added: [],
     });
   });
 
   it('should return 400 if no students found', async () => {
     // Create another course
-    const teacher = await prisma.user.create({
-      data: {
-        name: 'Teacher Two',
-        email: `teacher2_${Date.now()}@test.com`,
-        password: 'password',
-        role: Role.TEACHER,
-      },
+    const teacherResult = await authService.register({
+      name: 'Teacher Two',
+      email: `teacher2_batch_${Date.now()}@computacao.ufcg.edu.br`,
+      password: 'password',
+      role: Role.TEACHER,
     });
+    const teacher = teacherResult.user;
+    const token = teacherResult.access_token;
 
     const course = await prisma.course.create({
       data: {
@@ -132,8 +136,9 @@ describe('CoursesController (e2e) - Batch Add Students', () => {
 
     await request(app.getHttpServer() as Application)
       .post(`/courses/${course.id}/students/batch`)
+      .set('Authorization', `Bearer ${token}`)
       .send({
-        emails: ['nonexistent@test.com'],
+        emails: ['invalid@test.com'],
       })
       .expect(400);
   });
