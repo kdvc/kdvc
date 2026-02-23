@@ -11,7 +11,7 @@ import { CreateUserDto, UpdateUserDto } from '../dto/users.dto';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async create(data: CreateUserDto) {
     const existing = await this.prisma.user.findUnique({
@@ -130,14 +130,14 @@ export class UsersService {
       return Role.TEACHER;
     }
 
-    if (domain.includes('ccc')) {
+    if (domain.includes('ccc') || domain.includes('copin')) {
       return Role.STUDENT;
     }
 
     // If it ends with ufcg.edu.br but doesn't match above roles, it's invalid for this system
     // Per user: "não pode adicionar um email q não seja ccc como estudante"
     throw new ForbiddenException(
-      'Email must be from @ccc (Student) or @computacao/@dsc (Teacher)',
+      'Email must be from @ccc or @copin (Student) or @computacao/@dsc (Teacher)',
     );
   }
 
