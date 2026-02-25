@@ -20,6 +20,15 @@ export class CoursesService {
     private readonly usersService: UsersService,
   ) { }
 
+  private generateRandomCode(length = 8): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < length; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+  }
+
   async create(courseData: CreateCourseDto, teacherId: string) {
     await this.usersService.findTeacher(teacherId);
 
@@ -277,6 +286,66 @@ export class CoursesService {
           studentId,
           courseId,
         },
+      },
+    });
+  }
+
+  async regenerateInviteCode(courseId: string, teacherId: string) {
+    const course = await this.findById(courseId);
+
+    if (course.teacherId !== teacherId) {
+      throw new ForbiddenException('You can only modify your own courses');
+    }
+
+    let inviteCode = this.generateRandomCode();
+    let isUnique = false;
+    while (!isUnique) {
+      const existing = await this.prisma.course.findUnique({ where: { inviteCode } });
+      if (!existing) {
+        isUnique = true;
+      } else {
+        inviteCode = this.generateRandomCode();
+      }
+    }
+
+    return this.prisma.course.update({
+      where: { id: courseId },
+      data: { inviteCode },
+      select: { inviteCode: true },
+    });
+  }
+
+  async enrollWithCode(inviteCode: string, studentId: string) {
+    const course = await this.prisma.course.findUnique({
+      where: { inviteCode },
+    });
+
+    if (!course) {
+      throw new NotFoundException('Invalid invite code');
+    }
+
+    await this.usersService.findStudent(studentId);
+
+    const existing = await this.prisma.studentCourse.findUnique({
+      where: {
+        studentId_courseId: {
+          studentId,
+          courseId: course.id,
+        },
+      },
+    });
+
+    if (existing) {
+      throw new BadRequestException('Student is already enrolled in this course');
+    }
+
+    return this.prisma.studentCourse.create({
+      data: {
+        studentId,
+        courseId: course.id,
+      },
+      include: {
+        course: true,
       },
     });
   }
