@@ -101,9 +101,9 @@ export default function ProfessorHomeScreen() {
     setStartClassModalVisible(true);
   };
 
-  const proceedStartCall = async (topic?: string) => {
+  const proceedStartCall = async (topic: string) => {
     if (!courseForStart) return;
-    const { id: disciplineId, name: disciplineName, lastClassId } = courseForStart;
+    const { id: disciplineId, name: disciplineName } = courseForStart;
     setStartClassModalVisible(false);
 
     setSelectedDiscipline(disciplineName);
@@ -111,59 +111,40 @@ export default function ProfessorHomeScreen() {
 
     try {
       const courseStudents = await apiFetch<any[]>(`/courses/${disciplineId}/students`);
-      let classId: string | null = null;
-      let currentAttendance: any[] = [];
 
-      // If topic is provided, it's a NEW class. If undefined, it's REOPEN.
-      if (topic !== undefined) {
-        const newClass = await apiFetch<{ id: string }>('/classes', {
-          method: 'POST',
-          body: JSON.stringify({
-            topic: topic || `Chamada - ${disciplineName}`,
-            date: new Date().toISOString(),
-            courseId: disciplineId,
-          }),
-        });
-        classId = newClass.id;
-        setCurrentClassTopic(topic || `Chamada - ${disciplineName}`);
+      const newClass = await apiFetch<{ id: string }>('/classes', {
+        method: 'POST',
+        body: JSON.stringify({
+          topic: topic || `Chamada - ${disciplineName}`,
+          date: new Date().toISOString(),
+          courseId: disciplineId,
+        }),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: ['professorDisciplines'],
-        });
-      } else if (lastClassId) {
-        // Reopen existing from lastClassId
-        classId = lastClassId;
+      const classId = newClass.id;
+      setCurrentClassTopic(topic || `Chamada - ${disciplineName}`);
 
-        // Update the class date to NOW so it becomes the legitimate 'activeClass' for the course
-        await apiFetch(`/classes/${classId}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ date: new Date().toISOString() }),
-        });
-
-        const classDetails = await apiFetch<any>(`/classes/${classId}`);
-        currentAttendance = classDetails.attendances || [];
-        setCurrentClassTopic(classDetails.topic || '');
-      } else {
-        return;
-      }
+      queryClient.invalidateQueries({
+        queryKey: ['professorDisciplines'],
+      });
 
       if (classId) {
         setCurrentClassId(classId);
 
-        // Start BLE broadcasting for both NEW and REOPENED active classes
+        // Start BLE broadcasting
         const btOk = await startAttendance(classId);
         if (!btOk) return;
 
         const studentList = courseStudents.map((s: any) => ({
           ...s,
-          present: currentAttendance.some((a: any) => a.studentId === s.id),
+          present: false,
         }));
 
         setStudents(studentList);
         setModalVisible(true);
       }
     } catch (error) {
-      console.error('Failed to start/open class session', error);
+      console.error('Failed to start class session', error);
       Alert.alert('Erro', 'Não foi possível acessar a chamada.');
     }
   };
@@ -301,10 +282,8 @@ export default function ProfessorHomeScreen() {
       <StartClassModal
         visible={startClassModalVisible}
         hasActiveClass={!!courseForStart?.activeClassId}
-        hasAnyClass={!!courseForStart?.lastClassId}
         onClose={() => setStartClassModalVisible(false)}
         onStartNew={topic => proceedStartCall(topic)}
-        onReopen={() => proceedStartCall()}
       />
 
       <ProfileModal

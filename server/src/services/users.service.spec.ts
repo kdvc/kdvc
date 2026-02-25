@@ -206,6 +206,12 @@ describe('UsersService', () => {
       );
     });
 
+    it('should return STUDENT for @copin.ufcg.edu.br', () => {
+      expect(service.validateEmailAndGetRole('student@copin.ufcg.edu.br')).toBe(
+        Role.STUDENT,
+      );
+    });
+
     it('should return TEACHER for @computacao.ufcg.edu.br', () => {
       expect(
         service.validateEmailAndGetRole('prof@computacao.ufcg.edu.br'),

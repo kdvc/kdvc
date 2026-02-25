@@ -2,16 +2,11 @@ import { useCallback, useState } from 'react';
 import { startBroadcast, stopBroadcast } from '../../ble/BleBroadcaster';
 import { INDENTIFIER } from './types';
 
-export type useAdvertiserProps = {
-  allowed: boolean;
-};
-
-export const useAdvertiser = ({ allowed }: useAdvertiserProps) => {
+export const useAdvertiser = () => {
   const [isAdvertising, setIsAdvertising] = useState<boolean>(false);
 
   const startAdvertising = useCallback(
     (uuid: string) => {
-
       const uuidBytes =
         uuid
           .replace(/-/g, '')
@@ -34,7 +29,7 @@ export const useAdvertiser = ({ allowed }: useAdvertiserProps) => {
         setIsAdvertising(false);
       }
     },
-    [allowed],
+    [],
   );
 
   const stopAdvertising = async () => {

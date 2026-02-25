@@ -8,3 +8,10 @@
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
 # Add any project specific keep options here:
+
+# react-native-image-picker
+-keep public class com.imagepicker.** { *; }
+-keep class com.facebook.react.bridge.NativeModule { *; }
+-keep class com.facebook.react.bridge.JavaScriptModule { *; }
+-keep class com.facebook.react.bridge.ReactContextBaseJavaModule { *; }
+-keep class com.facebook.react.bridge.ReactMethod { *; }

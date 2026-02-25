@@ -162,7 +162,7 @@ describe('CoursesController', () => {
     it('should call service.findStudents', async () => {
       const req = { user: { id: 't1' } };
       await controller.findStudents('c1', req as unknown as Request);
-      expect(coursesService.findStudents).toHaveBeenCalledWith('c1', 't1');
+      expect(coursesService.findStudents).toHaveBeenCalledWith('c1', req.user);
     });
 
     it('should propagate service errors', async () => {

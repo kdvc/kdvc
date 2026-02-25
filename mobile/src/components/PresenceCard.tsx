@@ -1,13 +1,14 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
 interface Props {
   date: string;
   topic?: string;
   present: boolean;
+  onPress?: () => void;
 }
 
-export default function PresenceCard({ date, topic, present }: Props) {
+export default function PresenceCard({ date, topic, present, onPress }: Props) {
   const truncate = (str: string | undefined, max: number) => {
     if (!str) return '';
     return str.length > max ? str.substring(0, max) + '...' : str;
@@ -15,8 +16,10 @@ export default function PresenceCard({ date, topic, present }: Props) {
 
   const displayTopic = truncate(topic || 'Chamada', 25);
 
+  const Container = onPress ? TouchableOpacity : View;
+
   return (
-    <View style={styles.card}>
+    <Container style={styles.card} onPress={onPress}>
       <View style={styles.leftContainer}>
         <Text style={styles.date} numberOfLines={1} ellipsizeMode="tail">{displayTopic}</Text>
         <Text style={styles.topic}>{date}</Text>
@@ -24,7 +27,7 @@ export default function PresenceCard({ date, topic, present }: Props) {
       <Text style={[styles.status, present ? styles.present : styles.absent]}>
         {present ? 'Presente' : 'Ausente'}
       </Text>
-    </View>
+    </Container>
   );
 }
 

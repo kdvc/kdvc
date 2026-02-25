@@ -36,6 +36,7 @@ model Course {
   name        String
   description String?
   picture     String? @db.Text
+  inviteCode  String? @unique
 
   teacherId   String
   teacherRole Role    @default(TEACHER)

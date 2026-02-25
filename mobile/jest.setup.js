@@ -20,6 +20,7 @@ jest.mock('react-native-ble-plx', () => ({
         stopDeviceScan: jest.fn(),
         destroy: jest.fn(),
         enable: jest.fn().mockResolvedValue(undefined),
+        onStateChange: jest.fn().mockReturnValue({ remove: jest.fn() }),
     })),
     State: { PoweredOn: 'PoweredOn' },
 }));
@@ -149,6 +150,11 @@ jest.mock('@react-native-documents/picker', () => ({
 
 jest.mock('react-native-share', () => ({
     open: jest.fn(),
+}));
+
+jest.mock('@react-native-clipboard/clipboard', () => ({
+    setString: jest.fn(),
+    getString: jest.fn().mockResolvedValue(''),
 }));
 
 jest.mock('react-native-fs', () => ({

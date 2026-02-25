@@ -9,17 +9,28 @@ import com.facebook.react.modules.core.DeviceEventManagerModule
 class BleScannerModule(private val reactContext: ReactApplicationContext)
     : ReactContextBaseJavaModule(reactContext) {
 
-    private val scanner: BluetoothLeScanner? =
-        BluetoothAdapter.getDefaultAdapter()?.bluetoothLeScanner
     private var scanCallback: ScanCallback? = null
 
     override fun getName() = "BleScanner"
 
     @ReactMethod
     fun startScan(promise: Promise) {
+        android.util.Log.d("BleScannerModule", "startScan called")
+        val adapter = BluetoothAdapter.getDefaultAdapter()
+        val scanner = adapter?.bluetoothLeScanner
         if (scanner == null) {
-            promise.reject("NO_SCANNER", "BLE scanning not supported")
+            android.util.Log.e("BleScannerModule", "Scanner is NULL (BT off or not supported)")
+            promise.reject("NO_SCANNER", "BLE scanning not supported or Bluetooth is off")
             return
+        }
+
+        // Stop any previous scan
+        scanCallback?.let { 
+            try {
+                scanner.stopScan(it)
+            } catch (e: Exception) {
+                // ignore
+            }
         }
 
         val settings = ScanSettings.Builder()
@@ -37,12 +48,18 @@ class BleScannerModule(private val reactContext: ReactApplicationContext)
                     // Extrair manufacturer data (se existir)
                     val manufacturerData = result.scanRecord?.manufacturerSpecificData
                     if (manufacturerData != null && manufacturerData.size() > 0) {
-                        val key = manufacturerData.keyAt(0)
-                        val bytes = manufacturerData.get(key)
-                        val array = Arguments.createArray()
-                        bytes.forEach { array.pushInt(it.toInt() and 0xFF) }
-                        putArray("manufacturerData", array)
-                        putInt("manufacturerId", key)
+                        try {
+                            val key = manufacturerData.keyAt(0)
+                            val bytes = manufacturerData.get(key)
+                            if (bytes != null) {
+                                val array = Arguments.createArray()
+                                bytes.forEach { array.pushInt(it.toInt() and 0xFF) }
+                                putArray("manufacturerData", array)
+                                putInt("manufacturerId", key)
+                            }
+                        } catch (e: Exception) {
+                            // ignore parsing error
+                        }
                     }
                 }
                 
@@ -58,14 +75,18 @@ class BleScannerModule(private val reactContext: ReactApplicationContext)
 
         try {
             scanner.startScan(null, settings, scanCallback)
+            android.util.Log.d("BleScannerModule", "scanner.startScan successful")
             promise.resolve(null)
         } catch (e: Exception) {
+            android.util.Log.e("BleScannerModule", "scanner.startScan exception: ${e.message}")
             promise.reject("START_FAILED", e.message)
         }
     }
 
     @ReactMethod
     fun stopScan(promise: Promise) {
+        val adapter = BluetoothAdapter.getDefaultAdapter()
+        val scanner = adapter?.bluetoothLeScanner
         scanCallback?.let { scanner?.stopScan(it) }
         scanCallback = null
         promise.resolve(null)

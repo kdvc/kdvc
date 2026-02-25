@@ -245,14 +245,14 @@ describe('CoursesService', () => {
       const students = [{ student: { id: 's1' } }];
       prisma.studentCourse.findMany.mockResolvedValue(students);
 
-      const result = await service.findStudents('c1', 't1');
+      const result = await service.findStudents('c1', { id: 't1', role: Role.TEACHER });
       expect(result).toEqual([{ id: 's1' }]);
     });
 
     it('should throw ForbiddenException if teacher does not own course', async () => {
       prisma.course.findUnique.mockResolvedValue({ teacherId: 't1' });
 
-      await expect(service.findStudents('c1', 't2')).rejects.toThrow(
+      await expect(service.findStudents('c1', { id: 't2', role: Role.TEACHER })).rejects.toThrow(
         ForbiddenException,
       );
     });

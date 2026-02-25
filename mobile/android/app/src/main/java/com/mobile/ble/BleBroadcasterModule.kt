@@ -9,20 +9,26 @@ import com.facebook.react.bridge.*
 class BleBroadcasterModule(private val reactContext: ReactApplicationContext)
     : ReactContextBaseJavaModule(reactContext) {
 
-    private val advertiser: BluetoothLeAdvertiser? =
-        BluetoothAdapter.getDefaultAdapter()?.bluetoothLeAdvertiser
     private var callback: AdvertiseCallback? = null
-    private var scanner: BluetoothLeScanner? =
-	BluetoothAdapter.getDefaultAdapter()?.bluetoothLeScanner
-    private var scanCallback: ScanCallback? = null
 
     override fun getName() = "BleBroadcaster"
 
     @ReactMethod
 	fun start(companyId: Int, payload: ReadableArray, promise: Promise) {
+        val adapter = BluetoothAdapter.getDefaultAdapter()
+        val advertiser = adapter?.bluetoothLeAdvertiser
         if (advertiser == null) {
-            promise.reject("NO_ADVERTISER", "BLE advertising not supported")
+            promise.reject("NO_ADVERTISER", "BLE advertising not supported or Bluetooth is off")
             return
+        }
+
+        // Stop any previous broadcast
+        callback?.let { 
+            try {
+                advertiser.stopAdvertising(it)
+            } catch (e: Exception) {
+                // ignore
+            }
         }
         val bytes = ByteArray(payload.size()) { i -> payload.getInt(i).toByte() }
 
@@ -55,6 +61,8 @@ class BleBroadcasterModule(private val reactContext: ReactApplicationContext)
 
     @ReactMethod
     fun stop(promise: Promise) {
+        val adapter = BluetoothAdapter.getDefaultAdapter()
+        val advertiser = adapter?.bluetoothLeAdvertiser
         callback?.let { advertiser?.stopAdvertising(it) }
         callback = null
         promise.resolve(null)

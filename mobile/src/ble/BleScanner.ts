@@ -28,17 +28,20 @@ export function startScan(
   );
   const errorListener = eventEmitter.addListener(
     'onScanFailed',
-    onError || (() => {}),
+    onError || (() => { }),
   );
 
-  BleScanner.startScan().catch(err => {
-    console.error('startScan error:', err);
+  BleScanner.startScan().then(() => {
+    // silently resolve
+  }).catch(err => {
+    console.error('Native startScan error:', err);
     onError?.(err);
   });
 
   return () => {
     deviceListener.remove();
     errorListener.remove();
+    stopScan().catch(err => console.error('stopScan error in cleanup:', err));
   };
 }
 

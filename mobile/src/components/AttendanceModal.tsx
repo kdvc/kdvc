@@ -25,6 +25,7 @@ interface AttendanceModalProps {
   onClose: () => void;
   onSetPresence: (studentId: string, present: boolean) => void;
   onUpdateTopic?: (newTopic: string) => void;
+  readOnly?: boolean;
 }
 
 export const AttendanceModal: React.FC<AttendanceModalProps> = ({
@@ -35,12 +36,26 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
   onClose,
   onSetPresence,
   onUpdateTopic,
+  readOnly = false,
 }) => {
   const [editingTopic, setEditingTopic] = React.useState(classTopic);
+  const [searchQuery, setSearchQuery] = React.useState('');
   React.useEffect(() => { setEditingTopic(classTopic); }, [classTopic]);
 
   const presentCount = students.filter(s => s.present).length;
   const totalCount = students.length;
+
+  const sortedAndFilteredStudents = React.useMemo(() => {
+    let result = [...students];
+    if (searchQuery.trim()) {
+      const lowerQuery = searchQuery.toLowerCase();
+      result = result.filter(s =>
+        s.name.toLowerCase().includes(lowerQuery) ||
+        (s.enrollmentId && s.enrollmentId.toLowerCase().includes(lowerQuery))
+      );
+    }
+    return result.sort((a, b) => a.name.localeCompare(b.name));
+  }, [students, searchQuery]);
   return (
     <Modal
       animationType="slide"
@@ -54,26 +69,42 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
           <Text style={styles.modalTitle}>{disciplineName}</Text>
 
           <View style={styles.topicContainer}>
-            <TextInput
-              style={styles.topicInput}
-              value={editingTopic}
-              onChangeText={setEditingTopic}
-              onBlur={() => {
-                if (onUpdateTopic && editingTopic !== classTopic) {
-                  onUpdateTopic(editingTopic);
-                }
-              }}
-              placeholder="Nome da chamada"
-              placeholderTextColor="#999"
-            />
+            {readOnly ? (
+              <Text style={[styles.topicInput, { borderWidth: 0, backgroundColor: 'transparent', textAlign: 'center', fontSize: 16, fontWeight: 'bold' }]}>
+                {classTopic || "Chamada"}
+              </Text>
+            ) : (
+              <TextInput
+                style={styles.topicInput}
+                value={editingTopic}
+                onChangeText={setEditingTopic}
+                onBlur={() => {
+                  if (onUpdateTopic && editingTopic !== classTopic) {
+                    onUpdateTopic(editingTopic);
+                  }
+                }}
+                placeholder="Nome da chamada"
+                placeholderTextColor="#999"
+              />
+            )}
           </View>
 
           <Text style={styles.subtitle}>
             Presença: {presentCount}/{totalCount} alunos
           </Text>
 
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Buscar aluno..."
+              placeholderTextColor="#999"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+
           <FlatList
-            data={students}
+            data={sortedAndFilteredStudents}
             keyExtractor={item => item.id}
             renderItem={({ item }) => (
               <View style={styles.studentItem}>
@@ -90,45 +121,47 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
                     {item.enrollmentId || 'Sem matrícula'}
                   </Text>
                 </View>
-                <View style={styles.actionButtons}>
-                  <TouchableOpacity
-                    style={[
-                      styles.iconButton,
-                      item.present
-                        ? styles.presentButtonActive
-                        : styles.presentButtonInactive,
-                    ]}
-                    onPress={() => onSetPresence(item.id, true)}
-                  >
-                    <Text
+                {!readOnly && (
+                  <View style={styles.actionButtons}>
+                    <TouchableOpacity
                       style={[
-                        styles.buttonIcon,
-                        item.present ? styles.iconActive : styles.iconInactive,
+                        styles.iconButton,
+                        item.present
+                          ? styles.presentButtonActive
+                          : styles.presentButtonInactive,
                       ]}
+                      onPress={() => onSetPresence(item.id, true)}
                     >
-                      ✓
-                    </Text>
-                  </TouchableOpacity>
+                      <Text
+                        style={[
+                          styles.buttonIcon,
+                          item.present ? styles.iconActive : styles.iconInactive,
+                        ]}
+                      >
+                        ✓
+                      </Text>
+                    </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={[
-                      styles.iconButton,
-                      !item.present
-                        ? styles.absentButtonActive
-                        : styles.absentButtonInactive,
-                    ]}
-                    onPress={() => onSetPresence(item.id, false)}
-                  >
-                    <Text
+                    <TouchableOpacity
                       style={[
-                        styles.buttonIcon,
-                        !item.present ? styles.iconActive : styles.iconInactive,
+                        styles.iconButton,
+                        !item.present
+                          ? styles.absentButtonActive
+                          : styles.absentButtonInactive,
                       ]}
+                      onPress={() => onSetPresence(item.id, false)}
                     >
-                      ✕
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+                      <Text
+                        style={[
+                          styles.buttonIcon,
+                          !item.present ? styles.iconActive : styles.iconInactive,
+                        ]}
+                      >
+                        ✕
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
             )}
             style={styles.list}
@@ -191,6 +224,19 @@ const styles = StyleSheet.create({
     color: '#333',
     backgroundColor: '#f9f9f9',
     textAlign: 'center',
+  },
+  searchContainer: {
+    width: '100%',
+    marginBottom: 10,
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 15,
+    backgroundColor: '#fff',
+    color: '#333',
   },
   list: {
     width: '100%',

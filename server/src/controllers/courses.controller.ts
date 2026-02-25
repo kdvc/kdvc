@@ -22,8 +22,8 @@ import {
   AddStudentDto,
 } from '../dto/courses.dto';
 import { ClassesService } from '../services/classes.service';
-import { Authenticated } from 'src/auth/authenticated.decorator';
-import { Role } from 'prisma/generated/prisma/enums';
+import { Authenticated } from '../auth/authenticated.decorator';
+import { Role } from '../../prisma/generated/prisma/enums';
 import { Request } from 'express';
 
 @ApiTags('courses')
@@ -181,7 +181,7 @@ export class CoursesController {
   }
 
   @Get(':id/students')
-  @Authenticated(Role.TEACHER)
+  @Authenticated()
   @ApiOperation({ summary: 'Get all students of a course' })
   @ApiParam({
     name: 'id',
@@ -194,7 +194,7 @@ export class CoursesController {
   })
   @ApiResponse({ status: 404, description: 'Course not found' })
   findStudents(@Param('id') id: string, @Req() { user }: Request) {
-    return this.coursesService.findStudents(id, user.id);
+    return this.coursesService.findStudents(id, user);
   }
 
   @Post(':id/students/batch')
@@ -279,5 +279,49 @@ export class CoursesController {
   })
   findClasses(@Param('id') id: string) {
     return this.classesService.findAllByCourse(id);
+  }
+
+  @Post(':id/invite/regenerate')
+  @Authenticated(Role.TEACHER)
+  @ApiOperation({ summary: 'Regenerate the invite code for a course' })
+  @ApiParam({
+    name: 'id',
+    description: 'Course ID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Invite code regenerated successfully',
+  })
+  @ApiResponse({ status: 403, description: 'Not authorized to modify this course' })
+  @ApiResponse({ status: 404, description: 'Course not found' })
+  regenerateInviteCode(@Param('id') id: string, @Req() { user }: Request) {
+    return this.coursesService.regenerateInviteCode(id, user.id);
+  }
+
+  @Post('join')
+  @Authenticated(Role.STUDENT)
+  @ApiOperation({ summary: 'Join a course using an invite code' })
+  @ApiBody({
+    description: 'Invite Code',
+    schema: {
+      type: 'object',
+      properties: {
+        code: {
+          type: 'string',
+          example: 'A1B2C3D4',
+        },
+      },
+      required: ['code'],
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Student successfully joined the course',
+  })
+  @ApiResponse({ status: 400, description: 'Invalid code or already enrolled' })
+  @ApiResponse({ status: 404, description: 'Course not found' })
+  enrollWithCode(@Body() body: { code: string }, @Req() { user }: Request) {
+    return this.coursesService.enrollWithCode(body.code, user.id);
   }
 }

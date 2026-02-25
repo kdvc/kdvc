@@ -10,6 +10,9 @@ import { useStudentClasses } from '../../hooks/useStudentClasses';
 import { apiFetch } from '../../services/api';
 import { getCurrentUser, updateCurrentUser } from '../../services/authStore';
 import { useStudentAttendance } from '../../context/StudentAttendanceContext';
+import { JoinCourseModal } from '../../components/JoinCourseModal';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { TouchableOpacity, Alert } from 'react-native';
 
 export default function StudentHomeScreen() {
   const navigation = useNavigation<any>();
@@ -51,6 +54,8 @@ export default function StudentHomeScreen() {
 
   const [user, setUser] = useState<any>(null);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
+  const [joinModalVisible, setJoinModalVisible] = useState(false);
+  const [isJoiningCourse, setIsJoiningCourse] = useState(false);
   const [isMandatoryProfileUpdate, setIsMandatoryProfileUpdate] =
     useState(false);
 
@@ -102,6 +107,24 @@ export default function StudentHomeScreen() {
     }
   };
 
+  const handleJoinCourse = async (code: string) => {
+    try {
+      setIsJoiningCourse(true);
+      await apiFetch('/courses/join', {
+        method: 'POST',
+        body: JSON.stringify({ code }),
+      });
+      Alert.alert('Sucesso', 'Você entrou na turma com sucesso!');
+      setJoinModalVisible(false);
+      refetchClasses(); // Refresh list to show new course
+    } catch (error: any) {
+      console.error('Failed to join course', error);
+      Alert.alert('Erro', error.message || 'Não foi possível entrar na turma. Verifique o código e tente novamente.');
+    } finally {
+      setIsJoiningCourse(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <Header onOpenProfile={() => setProfileModalVisible(true)} userName={user?.displayName || user?.name} userPhoto={user?.profilePicture} />
@@ -111,7 +134,9 @@ export default function StudentHomeScreen() {
         keyExtractor={item => item.id}
         contentContainerStyle={styles.listContainer}
         renderItem={({ item }) => {
-          const activeClass = courseClassMap[item.id];
+          const activeClass = (courseClassMap && typeof courseClassMap === 'object' && item)
+            ? (courseClassMap as any)[item.id]
+            : undefined;
           return (
             <ClassCard
               title={item.name}
@@ -165,6 +190,20 @@ export default function StudentHomeScreen() {
         isMandatory={isMandatoryProfileUpdate}
         onSaveSuccess={handleProfileSave}
       />
+
+      <JoinCourseModal
+        visible={joinModalVisible}
+        onClose={() => setJoinModalVisible(false)}
+        onJoin={handleJoinCourse}
+        isLoading={isJoiningCourse}
+      />
+
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => setJoinModalVisible(true)}
+      >
+        <MaterialIcons name="group-add" size={24} color="#FFFFFF" />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -178,5 +217,22 @@ const styles = StyleSheet.create({
   listContainer: {
     paddingHorizontal: 24,
     paddingTop: 24,
+    paddingBottom: 80, // Space for FAB
+  },
+  fab: {
+    position: 'absolute',
+    right: 16,
+    bottom: 30,
+    backgroundColor: '#4F378B',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
 });

@@ -9,15 +9,21 @@ import {
   Alert,
   ScrollView,
   KeyboardAvoidingView,
+  ActivityIndicator,
   Platform,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import Share from 'react-native-share';
+import Clipboard from '@react-native-clipboard/clipboard';
 
 interface AddStudentModalProps {
   visible: boolean;
   onClose: () => void;
   onAdd: (emails: string[]) => void;
   isLoading?: boolean;
+  inviteCode?: string | null;
+  onRegenerateCode?: () => void;
+  isRegenerating?: boolean;
 }
 
 const colors = {
@@ -36,6 +42,9 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
   onClose,
   onAdd,
   isLoading = false,
+  inviteCode,
+  onRegenerateCode,
+  isRegenerating = false,
 }) => {
   const [emailInput, setEmailInput] = useState('');
   const [emails, setEmails] = useState<string[]>([]);
@@ -86,6 +95,26 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
     onClose();
   };
 
+  const handleCopyCode = async () => {
+    if (!inviteCode) return;
+    try {
+      await Share.open({
+        message: `Entre na minha turma usando o código de convite: ${inviteCode}`,
+        title: 'Código de Convite',
+      });
+    } catch (error: any) {
+      if (error?.message !== 'User did not share') {
+        console.error('Error sharing code:', error);
+      }
+    }
+  };
+
+  const handleCopyToClipboard = () => {
+    if (!inviteCode) return;
+    Clipboard.setString(inviteCode);
+    Alert.alert('Copiado!', 'O código de convite foi copiado para a área de transferência.', [{ text: 'OK' }]);
+  };
+
   return (
     <Modal
       animationType="slide"
@@ -108,8 +137,51 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
             </View>
 
             <View style={styles.content}>
+              <View style={styles.inviteContainer}>
+                <View style={styles.inviteHeader}>
+                  <Text style={styles.inviteLabel}>Código de Convite</Text>
+                </View>
+                <View style={styles.inviteBox}>
+                  {inviteCode ? (
+                    <>
+                      <Text style={styles.inviteCodeText}>{inviteCode}</Text>
+                      <View style={styles.inviteActions}>
+                        <TouchableOpacity onPress={handleCopyToClipboard} style={styles.iconButton}>
+                          <MaterialIcons name="content-copy" size={22} color={colors.primary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={handleCopyCode} style={styles.iconButton}>
+                          <MaterialIcons name="share" size={22} color={colors.primary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={onRegenerateCode} style={styles.iconButton} disabled={isRegenerating}>
+                          {isRegenerating ? (
+                            <ActivityIndicator size="small" color={colors.primary} />
+                          ) : (
+                            <MaterialIcons name="autorenew" size={22} color={colors.primary} />
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={styles.emptyInviteText}>Nenhum código gerado</Text>
+                      <TouchableOpacity
+                        onPress={onRegenerateCode}
+                        style={styles.generateButton}
+                        disabled={isRegenerating}
+                      >
+                        {isRegenerating ? (
+                          <ActivityIndicator size="small" color={colors.surface} />
+                        ) : (
+                          <Text style={styles.generateButtonText}>Gerar</Text>
+                        )}
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </View>
+              </View>
+
               <Text style={styles.description}>
-                Digite os e-mails dos alunos para adicioná-los à turma.
+                Ou digite os e-mails dos alunos para adicioná-los à turma.
                 Pressione Enter para adicionar.
               </Text>
 
@@ -226,6 +298,59 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.outline,
     marginBottom: 16,
+  },
+  inviteContainer: {
+    marginBottom: 20,
+    backgroundColor: colors.inputBackground,
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  inviteHeader: {
+    marginBottom: 8,
+  },
+  inviteLabel: {
+    fontSize: 14,
+    color: colors.outline,
+    fontWeight: '600',
+  },
+  inviteBox: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  inviteCodeText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: colors.primary,
+    letterSpacing: 2,
+  },
+  inviteActions: {
+    flexDirection: 'row',
+  },
+  iconButton: {
+    padding: 8,
+    marginLeft: 8,
+    backgroundColor: colors.primaryLight,
+    borderRadius: 8,
+  },
+  emptyInviteText: {
+    fontSize: 14,
+    color: colors.outline,
+    fontStyle: 'italic',
+  },
+  generateButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginLeft: 12,
+  },
+  generateButtonText: {
+    color: colors.surface,
+    fontWeight: 'bold',
+    fontSize: 14,
   },
   inputContainer: {
     flexDirection: 'row',

@@ -12,10 +12,8 @@ import {
 interface StartClassModalProps {
     visible: boolean;
     hasActiveClass: boolean;
-    hasAnyClass: boolean;
     onClose: () => void;
     onStartNew: (topic: string) => void;
-    onReopen: () => void;
 }
 
 const colors = {
@@ -29,10 +27,8 @@ const colors = {
 export const StartClassModal: React.FC<StartClassModalProps> = ({
     visible,
     hasActiveClass,
-    hasAnyClass,
     onClose,
     onStartNew,
-    onReopen,
 }) => {
     const [topic, setTopic] = useState('');
 
@@ -79,16 +75,10 @@ export const StartClassModal: React.FC<StartClassModalProps> = ({
                         <TouchableOpacity
                             style={[styles.modalButton, styles.startButton]}
                             onPress={() => onStartNew(topic)}
-                        >            <Text style={[styles.buttonText, styles.startButtonText]}>Iniciar Nova</Text>
+                        >
+                            <Text style={[styles.buttonText, styles.startButtonText]}>Iniciar Nova</Text>
                         </TouchableOpacity>
 
-                        {hasAnyClass && (
-                            <TouchableOpacity
-                                style={[styles.modalButton, styles.reopenButton]}
-                                onPress={onReopen}
-                            >                <Text style={[styles.buttonText, styles.reopenButtonText]}>Reabrir Última</Text>
-                            </TouchableOpacity>
-                        )}
 
                         <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
                             <Text style={[styles.buttonText, styles.cancelButtonText]}>Cancelar</Text>
@@ -144,26 +134,21 @@ const styles = StyleSheet.create({
         color: colors.text,
     },
     buttonContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+        flexDirection: 'column',
+        alignItems: 'center',
         marginTop: 10,
+        gap: 12,
     },
     modalButton: {
-        flex: 1,
+        width: '100%',
         paddingVertical: 12,
         borderRadius: 8,
         alignItems: 'center',
-        marginHorizontal: 5,
     },
     cancelButton: {
+        width: '100%',
         paddingVertical: 10,
         alignItems: 'center',
-        marginTop: 4,
-    },
-    reopenButton: {
-        borderWidth: 1,
-        borderColor: colors.primary,
-        backgroundColor: 'transparent',
     },
     startButton: {
         backgroundColor: colors.primary,
@@ -173,9 +158,6 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
     cancelButtonText: {
-        color: colors.primary,
-    },
-    reopenButtonText: {
         color: colors.primary,
     },
     startButtonText: {
