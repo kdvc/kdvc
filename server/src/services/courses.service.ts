@@ -405,17 +405,28 @@ export class CoursesService {
     };
   }
 
-  async findStudents(courseId: string, teacherId: string) {
+  async findStudents(courseId: string, user: any) {
     const course = await this.prisma.course.findUnique({
       where: { id: courseId },
-      select: { teacherId: true },
+      include: {
+        students: true,
+      }
     });
 
     if (!course) {
       throw new NotFoundException('Course not found');
     }
 
-    if (course.teacherId !== teacherId) {
+    if (user.role === 'TEACHER') {
+      if (course.teacherId !== user.id) {
+        throw new ForbiddenException();
+      }
+    } else if (user.role === 'STUDENT') {
+      const isEnrolled = course.students.some((s) => s.studentId === user.id);
+      if (!isEnrolled) {
+        throw new ForbiddenException('You are not enrolled in this course');
+      }
+    } else {
       throw new ForbiddenException();
     }
 

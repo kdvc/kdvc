@@ -22,8 +22,8 @@ import {
   AddStudentDto,
 } from '../dto/courses.dto';
 import { ClassesService } from '../services/classes.service';
-import { Authenticated } from 'src/auth/authenticated.decorator';
-import { Role } from 'prisma/generated/prisma/enums';
+import { Authenticated } from '../auth/authenticated.decorator';
+import { Role } from '../../prisma/generated/prisma/enums';
 import { Request } from 'express';
 
 @ApiTags('courses')
@@ -181,7 +181,7 @@ export class CoursesController {
   }
 
   @Get(':id/students')
-  @Authenticated(Role.TEACHER)
+  @Authenticated()
   @ApiOperation({ summary: 'Get all students of a course' })
   @ApiParam({
     name: 'id',
@@ -194,7 +194,7 @@ export class CoursesController {
   })
   @ApiResponse({ status: 404, description: 'Course not found' })
   findStudents(@Param('id') id: string, @Req() { user }: Request) {
-    return this.coursesService.findStudents(id, user.id);
+    return this.coursesService.findStudents(id, user);
   }
 
   @Post(':id/students/batch')
