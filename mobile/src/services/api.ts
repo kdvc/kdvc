@@ -1,6 +1,7 @@
 import { getAccessToken } from './authStore';
 
 const BASE_URL = 'https://kdvc.ogustavo.dev';
+// const BASE_URL = 'http://172.16.0.84:8000';
 
 type RequestOptions = Omit<RequestInit, 'headers'> & {
   headers?: Record<string, string>;

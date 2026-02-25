@@ -46,6 +46,25 @@ export default function ClassDetailsScreen() {
   const [studentsForAttendance, setStudentsForAttendance] = useState<any[]>([]);
   const [editCourseModalVisible, setEditCourseModalVisible] = useState(false);
   const [currentDiscipline, setCurrentDiscipline] = useState<any>(discipline);
+  const [isRegeneratingCode, setIsRegeneratingCode] = useState(false);
+
+  const handleRegenerateInviteCode = async () => {
+    try {
+      setIsRegeneratingCode(true);
+      const response = await apiFetch<any>(`/courses/${currentDiscipline.id}/invite/regenerate`, {
+        method: 'POST',
+      });
+      if (response && response.inviteCode) {
+        setCurrentDiscipline((prev: any) => ({ ...prev, inviteCode: response.inviteCode }));
+        Alert.alert('Sucesso', 'Código de convite gerado/atualizado com sucesso!');
+      }
+    } catch (error) {
+      console.error('Failed to regenerate invite code', error);
+      Alert.alert('Erro', 'Não foi possível gerar um novo código de convite.');
+    } finally {
+      setIsRegeneratingCode(false);
+    }
+  };
 
   const { mutate: addStudents, isPending: isAddingStudents } = useAddStudents();
   const { mutate: removeCourse } = useRemoveCourse();
@@ -538,6 +557,9 @@ export default function ClassDetailsScreen() {
         onClose={() => setAddStudentModalVisible(false)}
         onAdd={handleAddStudents}
         isLoading={isAddingStudents}
+        inviteCode={currentDiscipline?.inviteCode}
+        onRegenerateCode={handleRegenerateInviteCode}
+        isRegenerating={isRegeneratingCode}
       />
 
       <AttendanceModal
