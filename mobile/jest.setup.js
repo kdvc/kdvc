@@ -20,6 +20,7 @@ jest.mock('react-native-ble-plx', () => ({
         stopDeviceScan: jest.fn(),
         destroy: jest.fn(),
         enable: jest.fn().mockResolvedValue(undefined),
+        onStateChange: jest.fn().mockReturnValue({ remove: jest.fn() }),
     })),
     State: { PoweredOn: 'PoweredOn' },
 }));
