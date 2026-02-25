@@ -152,6 +152,11 @@ jest.mock('react-native-share', () => ({
     open: jest.fn(),
 }));
 
+jest.mock('@react-native-clipboard/clipboard', () => ({
+    setString: jest.fn(),
+    getString: jest.fn().mockResolvedValue(''),
+}));
+
 jest.mock('react-native-fs', () => ({
     DocumentDirectoryPath: '/mock/path',
     CachesDirectoryPath: '/mock/cache',
