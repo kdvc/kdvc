@@ -12,6 +12,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 
 import PresenceCard from '../../components/PresenceCard';
+import { AttendanceModal } from '../../components/AttendanceModal';
+import { apiFetch } from '../../services/api';
+import { useState } from 'react';
 import { useCourseById } from '../../hooks/useClassById';
 import { useStudentAttendance } from '../../context/StudentAttendanceContext';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -28,6 +31,37 @@ export default function ClassDetailsScreen() {
   const activeClass = courseClassMap[classId];
   const isAttendanceActive = !!activeClass;
   const activeTopic = activeClass?.topic;
+
+  const [attendanceModalVisible, setAttendanceModalVisible] = useState(false);
+  const [studentsForAttendance, setStudentsForAttendance] = useState<any[]>([]);
+  const [currentClassTopic, setCurrentClassTopic] = useState<string>('');
+  const [isFetchingAttendance, setIsFetchingAttendance] = useState(false);
+
+  const handleViewAttendance = async (item: any) => {
+    try {
+      setIsFetchingAttendance(true);
+      // Fetch all students for the course
+      const courseStudents = await apiFetch<any[]>(`/courses/${classId}/students`);
+
+      // Fetch the full class details to get attendances
+      const classDetails = await apiFetch<any>(`/classes/${item.id}`);
+      const currentAttendance = classDetails.attendances || [];
+
+      // Map presence
+      const studentList = courseStudents.map((s: any) => ({
+        ...s,
+        present: currentAttendance.some((a: any) => a.studentId === s.id),
+      }));
+
+      setStudentsForAttendance(studentList);
+      setCurrentClassTopic(classDetails.topic || '');
+      setAttendanceModalVisible(true);
+    } catch (error) {
+      console.error('Failed to view attendance', error);
+    } finally {
+      setIsFetchingAttendance(false);
+    }
+  };
 
   if (isLoading || !classData) {
     return (
@@ -109,11 +143,22 @@ export default function ClassDetailsScreen() {
                   date={formattedDate}
                   topic={item.topic}
                   present={item.present}
+                  onPress={() => !isFetchingAttendance && handleViewAttendance(item)}
                 />
               );
             })}
         </View>
       </ScrollView>
+
+      <AttendanceModal
+        visible={attendanceModalVisible}
+        disciplineName={classData.name}
+        classTopic={currentClassTopic}
+        students={studentsForAttendance}
+        onClose={() => setAttendanceModalVisible(false)}
+        onSetPresence={() => { }} // Disabled in read-only mode
+        readOnly={true}
+      />
     </SafeAreaView>
   );
 }
